@@ -1,797 +1,1151 @@
 <!DOCTYPE html>
-<html lang="id">
+<html lang="id" class="dark">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Joki Income Tracker & Analytics Dashboard</title>
+  <title>Joki Income Analytics</title>
+  <script>try { if (localStorage.getItem('joki_theme') === 'light') document.documentElement.classList.remove('dark'); } catch (e) {}</script>
   <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
   <style>
-    input[type="checkbox"].row-checkbox {
-      width: 1.25rem;
-      height: 1.25rem;
-      cursor: pointer;
-      accent-color: #3b82f6;
+    :root {
+      --bg:#f1f5f9; --surface:#ffffff; --surface2:#f8fafc; --border:#e2e8f0;
+      --text:#0f172a; --muted:#64748b; --accent:#2563eb; --grid:rgba(100,116,139,.16); --heat0:#e2e8f0;
     }
+    html.dark {
+      --bg:#020617; --surface:#0f172a; --surface2:#0b1220; --border:#1e293b;
+      --text:#e2e8f0; --muted:#94a3b8; --accent:#3b82f6; --grid:rgba(148,163,184,.12); --heat0:#1e293b;
+    }
+    html { color-scheme: light; }
+    html.dark { color-scheme: dark; }
+    body { background:var(--bg); color:var(--text); font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; }
+    .card { background:var(--surface); border:1px solid var(--border); border-radius:1rem; }
+    .card-2 { background:var(--surface2); border:1px solid var(--border); border-radius:.75rem; }
+    .muted { color:var(--muted); }
+    .divider { border-color:var(--border); }
+    .input { background:var(--surface2); border:1px solid var(--border); border-radius:.75rem; padding:.45rem .75rem; font-size:.75rem; color:var(--text); outline:none; transition:border-color .15s; }
+    .input:focus { border-color:var(--accent); }
+    .btn { display:inline-flex; align-items:center; justify-content:center; gap:.5rem; font-size:.75rem; font-weight:600; padding:.55rem .9rem; border-radius:.75rem; transition:all .15s; cursor:pointer; border:1px solid transparent; white-space:nowrap; }
+    .btn:disabled { opacity:.6; cursor:not-allowed; }
+    .btn-primary { background:#2563eb; color:#fff; } .btn-primary:hover:not(:disabled) { background:#1d4ed8; }
+    .btn-success { background:#059669; color:#fff; } .btn-success:hover:not(:disabled) { background:#047857; }
+    .btn-ghost { background:var(--surface2); border-color:var(--border); color:var(--text); } .btn-ghost:hover:not(:disabled) { border-color:var(--accent); }
+    .btn-warn { background:rgba(245,158,11,.12); color:#d97706; border-color:rgba(245,158,11,.35); }
+    .btn-danger { background:rgba(244,63,94,.1); color:#e11d48; border-color:rgba(244,63,94,.3); }
+    .tab-btn { background:transparent; color:var(--muted); } .tab-btn:hover { background:var(--surface2); }
+    .tab-btn.active { background:#2563eb; color:#fff; box-shadow:0 6px 16px -6px rgba(37,99,235,.6); }
+    .chip { display:inline-flex; align-items:center; gap:.35rem; font-size:.68rem; font-weight:600; padding:.2rem .55rem; border-radius:.5rem; background:rgba(59,130,246,.1); color:#3b82f6; border:1px solid rgba(59,130,246,.22); }
+    .delta-up { color:#10b981; } .delta-down { color:#f43f5e; } .delta-flat { color:var(--muted); }
+    .skeleton { background:linear-gradient(90deg,var(--surface2),var(--border),var(--surface2)); background-size:200% 100%; animation:sh 1.2s infinite; border-radius:.75rem; }
+    @keyframes sh { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
+    th.sortable { cursor:pointer; user-select:none; } th.sortable:hover { color:var(--text); }
+    thead th { color:var(--muted); font-size:.65rem; text-transform:uppercase; letter-spacing:.05em; background:var(--surface2); }
+    tbody tr { border-top:1px solid var(--border); }
+    tbody tr:hover { background:var(--surface2); }
+    tr.row-sel { background:rgba(59,130,246,.12) !important; box-shadow:inset 3px 0 0 #3b82f6; }
+    input[type="checkbox"].row-checkbox { width:1.1rem; height:1.1rem; cursor:pointer; accent-color:#3b82f6; }
+    .heat-grid { display:grid; grid-auto-flow:column; grid-template-rows:repeat(7,14px); gap:3px; }
+    .heat-cell { width:14px; height:14px; border-radius:3px; background:var(--heat0); }
+    .heat-label { height:14px; font-size:9px; line-height:14px; color:var(--muted); }
+    .drop-active { border-color:#3b82f6 !important; background:rgba(59,130,246,.08) !important; }
+    .scroll-thin::-webkit-scrollbar { height:6px; width:6px; } .scroll-thin::-webkit-scrollbar-thumb { background:var(--border); border-radius:6px; }
+    .toast { animation:tin .2s ease-out; } @keyframes tin { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:none} }
+    .progress { height:10px; border-radius:999px; background:var(--surface2); border:1px solid var(--border); overflow:hidden; }
+    .progress > div { height:100%; border-radius:999px; transition:width .5s; }
   </style>
 </head>
-<body class="bg-slate-950 text-slate-100 min-h-screen font-sans pb-12">
+<body class="min-h-screen pb-12">
 
-  <!-- Header Navigasi -->
-  <header class="bg-slate-900/90 border-b border-slate-800 sticky top-0 z-30 backdrop-blur-md">
-    <div class="max-w-7xl mx-auto px-4 py-3 flex flex-col sm:flex-row items-center justify-between gap-3">
+  <!-- HEADER -->
+  <header class="sticky top-0 z-30 backdrop-blur-md" style="background:color-mix(in srgb,var(--surface) 88%,transparent);border-bottom:1px solid var(--border)">
+    <div class="max-w-7xl mx-auto px-4 py-3 flex flex-wrap items-center justify-between gap-3">
       <div class="flex items-center gap-3">
-        <div class="p-2.5 bg-blue-600/20 text-blue-400 rounded-xl border border-blue-500/30">
-          <i class="fa-solid fa-gamepad text-2xl"></i>
+        <div class="w-10 h-10 rounded-xl flex items-center justify-center bg-blue-500/10 text-blue-500 border border-blue-500/25">
+          <i class="fa-solid fa-gamepad text-xl"></i>
         </div>
         <div>
-          <h1 class="text-lg font-bold text-white tracking-wide flex items-center gap-2">
-            Joki Income Analytics <span class="bg-blue-500/10 text-blue-400 text-[10px] px-2 py-0.5 rounded border border-blue-500/20 font-semibold">BCA Mutasi</span>
-          </h1>
-          <p class="text-[11px] text-slate-400">Monitoring Pendapatan Joki All-Time, Tahunan, Bulanan & Mingguan</p>
+          <h1 class="text-base font-bold leading-tight flex items-center gap-2">Joki Income Analytics <span class="chip">BCA Mutasi</span></h1>
+          <p class="text-[11px] muted" id="headSync">Monitoring pendapatan joki</p>
         </div>
       </div>
 
-      <!-- Navigation Tabs -->
       <div class="flex items-center gap-2">
-        <button id="tabBtnStaging" onclick="switchTab('staging')" class="px-4 py-2 rounded-lg text-xs font-semibold bg-blue-600 text-white shadow-lg transition flex items-center gap-2">
-          <i class="fa-solid fa-upload"></i> Upload & Staging
-        </button>
-        <button id="tabBtnDashboard" onclick="switchTab('dashboard')" class="px-4 py-2 rounded-lg text-xs font-semibold bg-slate-800 text-slate-300 hover:bg-slate-700 transition flex items-center gap-2">
-          <i class="fa-solid fa-chart-pie"></i> Dashboard Pendapatan
-        </button>
-        <button onclick="promptChangePassword()" title="Pengaturan Password API" class="p-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-xs transition border border-slate-700 ml-2">
-          <i class="fa-solid fa-key"></i>
-        </button>
+        <nav class="flex items-center gap-1 p-1 rounded-xl" style="background:var(--surface2);border:1px solid var(--border)">
+          <button id="tabBtnDashboard" onclick="switchTab('dashboard')" class="btn tab-btn active"><i class="fa-solid fa-chart-pie"></i><span class="hidden sm:inline">Dashboard</span></button>
+          <button id="tabBtnStaging" onclick="switchTab('staging')" class="btn tab-btn"><i class="fa-solid fa-upload"></i><span class="hidden sm:inline">Upload</span><span id="stBadge" class="hidden chip !py-0">0</span></button>
+        </nav>
+        <button onclick="loadDashboard(true)" id="btnRefresh" title="Muat ulang data" class="btn btn-ghost !px-3"><i class="fa-solid fa-rotate" id="refreshIcon"></i></button>
+        <button onclick="toggleTheme()" title="Ganti tema" class="btn btn-ghost !px-3"><i class="fa-solid fa-sun" id="themeIcon"></i></button>
+        <button onclick="openSettings()" title="Pengaturan" class="btn btn-ghost !px-3"><i class="fa-solid fa-gear"></i></button>
       </div>
     </div>
   </header>
 
   <main class="max-w-7xl mx-auto px-4 mt-6">
 
-    <!-- TAB 1: UPLOAD & STAGING -->
-    <section id="tabStaging" class="space-y-6">
+    <!-- ============ TAB: DASHBOARD ============ -->
+    <section id="tabDashboard" class="space-y-6">
 
-      <!-- Upload Controls -->
-      <div class="bg-slate-900/80 border border-slate-800 rounded-2xl p-5 flex flex-col md:flex-row items-center justify-between gap-4 shadow-sm">
+      <div id="dashSkeleton" class="space-y-4">
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div class="skeleton h-28"></div><div class="skeleton h-28"></div><div class="skeleton h-28"></div><div class="skeleton h-28"></div>
+        </div>
+        <div class="skeleton h-64"></div>
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4"><div class="skeleton h-64"></div><div class="skeleton h-64"></div></div>
+      </div>
+
+      <div id="dashEmpty" class="hidden card p-12 text-center">
+        <i class="fa-solid fa-inbox text-4xl muted opacity-50 mb-3 block"></i>
+        <p class="font-semibold">Belum ada data tersimpan</p>
+        <p class="text-xs muted mt-1">Unggah CSV mutasi BCA di tab Upload, lalu kirim ke Google Sheets.</p>
+        <button class="btn btn-primary mt-4" onclick="switchTab('staging')"><i class="fa-solid fa-upload"></i> Ke halaman Upload</button>
+      </div>
+
+      <div id="dashContent" class="hidden space-y-6">
+
+        <!-- KPI -->
+        <div class="flex flex-wrap items-end justify-between gap-2">
+          <div>
+            <h2 class="text-lg font-bold">Ringkasan Bisnis</h2>
+            <p class="text-xs muted" id="dataFresh">-</p>
+          </div>
+          <span id="syncChip" class="chip hidden"></span>
+        </div>
+        <div id="kpiRow1" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"></div>
+        <div id="kpiRow2" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"></div>
+
+        <!-- Insight -->
+        <div class="card p-5">
+          <h3 class="text-xs font-bold uppercase tracking-wider flex items-center gap-2 mb-3"><i class="fa-solid fa-lightbulb text-amber-500"></i> Insight Otomatis</h3>
+          <ul id="insightList" class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-2.5 text-[13px]"></ul>
+        </div>
+
+        <!-- Perbandingan -->
+        <div class="space-y-4">
+          <div class="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h2 class="text-lg font-bold">Perbandingan & Pertumbuhan</h2>
+              <p class="text-xs muted">Dibandingkan dengan periode yang sepadan (hari yang sama), bukan total penuh.</p>
+            </div>
+            <div class="flex items-center gap-2">
+              <span class="text-xs muted">Tahun:</span>
+              <select id="yearSelect" class="input" onchange="renderCompare()"></select>
+            </div>
+          </div>
+          <div id="cmpCards" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"></div>
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <div class="card p-5">
+              <h3 class="text-xs font-bold uppercase tracking-wider mb-3"><i class="fa-solid fa-chart-column text-blue-500 me-1.5"></i> Pendapatan Bulanan (YoY)</h3>
+              <div class="h-64"><canvas id="chYoY"></canvas></div>
+            </div>
+            <div class="card p-5">
+              <h3 class="text-xs font-bold uppercase tracking-wider mb-3"><i class="fa-solid fa-chart-line text-emerald-500 me-1.5"></i> Pendapatan Kumulatif</h3>
+              <div class="h-64"><canvas id="chCum"></canvas></div>
+            </div>
+          </div>
+          <div class="card overflow-hidden">
+            <div class="p-4 text-xs font-bold uppercase tracking-wider"><i class="fa-solid fa-table text-purple-500 me-1.5"></i> Tabel Perbandingan Per Bulan</div>
+            <div class="overflow-x-auto scroll-thin">
+              <table class="w-full text-xs text-left">
+                <thead><tr>
+                  <th class="p-3">Bulan</th><th class="p-3 text-right" id="thPrevYear">Tahun Lalu</th><th class="p-3 text-right" id="thCurYear">Tahun Ini</th>
+                  <th class="p-3 text-right">Selisih</th><th class="p-3 text-right">Pertumbuhan</th><th class="p-3 text-right">Order</th>
+                </tr></thead>
+                <tbody id="cmpTableBody"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tren -->
+        <div class="space-y-4">
+          <h2 class="text-lg font-bold">Tren 12 Bulan Terakhir</h2>
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <div class="card p-5">
+              <h3 class="text-xs font-bold uppercase tracking-wider mb-3"><i class="fa-solid fa-chart-simple text-blue-500 me-1.5"></i> Pendapatan & Rata-rata Bergerak (3 bulan)</h3>
+              <div class="h-64"><canvas id="chTrend"></canvas></div>
+            </div>
+            <div class="card p-5">
+              <h3 class="text-xs font-bold uppercase tracking-wider mb-3"><i class="fa-solid fa-receipt text-amber-500 me-1.5"></i> Jumlah Order & Rata-rata per Order</h3>
+              <div class="h-64"><canvas id="chOrders"></canvas></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Analisa pola -->
+        <div class="space-y-4">
+          <div class="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h2 class="text-lg font-bold">Analisa Pola Bisnis</h2>
+              <p class="text-xs muted" id="anaLabel">-</p>
+            </div>
+            <div class="flex flex-wrap items-center gap-2">
+              <select id="anaPeriod" class="input" onchange="onPeriodChange()">
+                <option value="7">7 hari terakhir</option>
+                <option value="30" selected>30 hari terakhir</option>
+                <option value="month">Bulan ini</option>
+                <option value="year">Tahun ini</option>
+                <option value="all">Semua waktu</option>
+                <option value="custom">Rentang kustom</option>
+              </select>
+              <div id="anaCustom" class="hidden flex items-center gap-2">
+                <input type="date" id="anaFrom" class="input" onchange="renderAnalysis()" />
+                <span class="muted text-xs">s/d</span>
+                <input type="date" id="anaTo" class="input" onchange="renderAnalysis()" />
+              </div>
+            </div>
+          </div>
+          <div id="anaCards" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"></div>
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <div class="card p-5 lg:col-span-2">
+              <h3 class="text-xs font-bold uppercase tracking-wider mb-3"><i class="fa-solid fa-wave-square text-blue-500 me-1.5"></i> Tren Pendapatan Periode <span class="muted normal-case font-medium" id="anaGroupLabel"></span></h3>
+              <div class="h-64"><canvas id="chDaily"></canvas></div>
+            </div>
+            <div class="card p-5">
+              <h3 class="text-xs font-bold uppercase tracking-wider mb-3"><i class="fa-solid fa-calendar-week text-emerald-500 me-1.5"></i> Pendapatan per Hari dalam Seminggu</h3>
+              <div class="h-60"><canvas id="chWeekday"></canvas></div>
+            </div>
+            <div class="card p-5">
+              <h3 class="text-xs font-bold uppercase tracking-wider mb-3"><i class="fa-solid fa-calendar-days text-purple-500 me-1.5"></i> Pendapatan per Tanggal dalam Bulan</h3>
+              <div class="h-60"><canvas id="chDom"></canvas></div>
+            </div>
+            <div class="card p-5 lg:col-span-2">
+              <h3 class="text-xs font-bold uppercase tracking-wider mb-3"><i class="fa-solid fa-layer-group text-amber-500 me-1.5"></i> Distribusi Nominal Order</h3>
+              <div class="h-56"><canvas id="chDist"></canvas></div>
+            </div>
+          </div>
+          <div class="card p-5">
+            <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+              <h3 class="text-xs font-bold uppercase tracking-wider"><i class="fa-solid fa-fire text-rose-500 me-1.5"></i> Peta Aktivitas Harian (26 Minggu Terakhir)</h3>
+              <div class="flex items-center gap-1.5 text-[10px] muted">Sepi <span class="heat-cell" style="background:var(--heat0)"></span><span class="heat-cell" style="background:rgba(16,185,129,.35)"></span><span class="heat-cell" style="background:rgba(16,185,129,.65)"></span><span class="heat-cell" style="background:rgba(16,185,129,1)"></span> Ramai</div>
+            </div>
+            <div class="overflow-x-auto scroll-thin pb-1"><div id="heatmap" class="flex gap-2"></div></div>
+          </div>
+        </div>
+
+        <!-- Target & Ranking -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <div class="card p-5">
+            <h3 class="text-xs font-bold uppercase tracking-wider mb-3"><i class="fa-solid fa-bullseye text-rose-500 me-1.5"></i> Target Bulanan</h3>
+            <div class="flex items-center gap-2 mb-4">
+              <span class="text-xs muted">Target Rp</span>
+              <input id="targetInput" type="number" min="0" step="100000" class="input w-40" placeholder="mis. 5000000" onchange="saveTarget()" />
+              <span class="text-[11px] muted">tersimpan di browser ini</span>
+            </div>
+            <div id="targetBox" class="space-y-2"></div>
+          </div>
+          <div class="card p-5">
+            <h3 class="text-xs font-bold uppercase tracking-wider mb-3"><i class="fa-solid fa-ranking-star text-amber-500 me-1.5"></i> Peringkat Bulan</h3>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+              <div><p class="text-[11px] font-semibold text-emerald-500 mb-2">Terbaik</p><div id="rankBest" class="space-y-2"></div></div>
+              <div><p class="text-[11px] font-semibold text-rose-500 mb-2">Terendah (bulan selesai)</p><div id="rankWorst" class="space-y-2"></div></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Transaksi -->
+        <div class="card p-5 space-y-4">
+          <div class="flex flex-col md:flex-row md:items-center justify-between gap-3">
+            <div>
+              <h3 class="text-xs font-bold uppercase tracking-wider"><i class="fa-solid fa-database text-emerald-500 me-1.5"></i> Data Transaksi</h3>
+              <p class="text-[11px] muted mt-0.5">Pilih bulan, cari, urutkan, atau ekspor ke CSV</p>
+            </div>
+            <div class="flex items-center gap-2 w-full md:w-auto">
+              <div class="relative flex-1 md:w-64">
+                <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 muted text-xs"></i>
+                <input type="text" id="tblSearch" placeholder="Cari nama / keterangan..." oninput="tbl.page=1;renderTable()" class="input w-full !pl-9" />
+              </div>
+              <button class="btn btn-ghost" onclick="exportCSV()"><i class="fa-solid fa-file-arrow-down"></i> CSV</button>
+            </div>
+          </div>
+          <div id="monthTabs" class="flex items-center gap-2 overflow-x-auto pb-1 scroll-thin"></div>
+          <div class="card-2 p-3 flex items-center justify-between text-xs">
+            <span class="muted" id="tblSummaryTitle">Ringkasan</span>
+            <div class="flex items-center gap-4 font-semibold"><span id="tblSummaryCount">0 Order</span><span class="text-emerald-500 font-bold" id="tblSummaryAmount">Rp 0</span></div>
+          </div>
+          <div class="overflow-x-auto scroll-thin rounded-xl" style="border:1px solid var(--border)">
+            <table class="w-full text-xs text-left">
+              <thead><tr>
+                <th class="p-3 sortable whitespace-nowrap" data-sort="ts">Tanggal <i class="fa-solid fa-sort ms-1 opacity-50"></i></th>
+                <th class="p-3 sortable" data-sort="keterangan">Keterangan <i class="fa-solid fa-sort ms-1 opacity-50"></i></th>
+                <th class="p-3 sortable" data-sort="nama">Pengirim <i class="fa-solid fa-sort ms-1 opacity-50"></i></th>
+                <th class="p-3 sortable text-right whitespace-nowrap" data-sort="amount">Nominal <i class="fa-solid fa-sort ms-1 opacity-50"></i></th>
+              </tr></thead>
+              <tbody id="tblBody"></tbody>
+            </table>
+          </div>
+          <div class="flex items-center justify-between text-xs">
+            <span class="muted" id="tblPageInfo"></span>
+            <div class="flex items-center gap-2">
+              <button class="btn btn-ghost" id="tblPrev" onclick="tblGo(-1)"><i class="fa-solid fa-chevron-left"></i></button>
+              <button class="btn btn-ghost" id="tblNext" onclick="tblGo(1)"><i class="fa-solid fa-chevron-right"></i></button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ TAB: STAGING ============ -->
+    <section id="tabStaging" class="hidden space-y-6">
+
+      <div id="dropZone" class="card p-6 flex flex-col md:flex-row items-center justify-between gap-4 border-2 border-dashed transition">
         <div>
-          <h2 class="text-sm font-bold text-white flex items-center gap-2">
-            <i class="fa-solid fa-file-csv text-blue-400"></i> Import File Mutasi BCA (.CSV)
-          </h2>
-          <p class="text-xs text-slate-400 mt-1">Sistem secara otomatis mengisolasi transaksi Kredit (CR) & membuang transaksi Debit (DB).</p>
+          <h2 class="text-sm font-bold flex items-center gap-2"><i class="fa-solid fa-file-csv text-blue-500"></i> Import File Mutasi BCA (.CSV)</h2>
+          <p class="text-xs muted mt-1">Seret file ke sini atau pilih manual. Transaksi Kredit (CR) diambil, Debit (DB) dibuang. Upload ulang aman: duplikat otomatis dilewati.</p>
         </div>
-
-        <div class="flex flex-wrap items-center gap-3 w-full md:w-auto justify-end">
-          <label class="flex items-center gap-2 bg-slate-950 border border-slate-800 px-3.5 py-2 rounded-xl text-xs cursor-pointer hover:bg-slate-900 transition">
-            <input type="checkbox" id="hideDecimals" class="rounded border-slate-700 text-blue-600 focus:ring-0" checked onchange="renderStagingTable()" />
-            <span>Hilangkan Desimal (<code>.00</code>)</span>
+        <div class="flex flex-wrap items-center gap-3 justify-end">
+          <label class="card-2 flex items-center gap-2 px-3.5 py-2 text-xs cursor-pointer">
+            <input type="checkbox" id="hideDecimals" checked onchange="renderStaging()" />
+            <span>Hilangkan desimal</span>
           </label>
-
-          <label class="bg-blue-600 hover:bg-blue-500 text-white font-medium text-xs px-4 py-2.5 rounded-xl cursor-pointer transition flex items-center gap-2 shadow-lg shadow-blue-600/20">
-            <i class="fa-solid fa-folder-open"></i> Pilih CSV Mutasi
-            <input type="file" id="csvFile" accept=".csv" class="hidden" onchange="handleFileUpload(event)" />
+          <label class="btn btn-primary cursor-pointer"><i class="fa-solid fa-folder-open"></i> Pilih CSV
+            <input type="file" id="csvFile" accept=".csv,text/csv" class="hidden" onchange="handleFileUpload(event)" />
           </label>
         </div>
       </div>
 
-      <!-- Ringkasan Staging Cards -->
-      <div id="stagingCardsSummary" class="hidden grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div class="bg-slate-900/80 border border-slate-800 rounded-2xl p-4">
-          <span class="text-xs text-emerald-400 font-medium flex items-center gap-1.5"><i class="fa-solid fa-money-bill-wave"></i> Total Nominal Staging</span>
-          <div class="text-xl font-bold text-emerald-400 mt-2" id="stagingTotalAmount">Rp 0</div>
-          <p class="text-[10px] text-slate-400 mt-1">Siap dikirim ke Google Sheets</p>
-        </div>
-        <div class="bg-slate-900/80 border border-slate-800 rounded-2xl p-4">
-          <span class="text-xs text-blue-400 font-medium flex items-center gap-1.5"><i class="fa-solid fa-receipt"></i> Total Transaksi Staging</span>
-          <div class="text-xl font-bold text-white mt-2" id="stagingTotalCount">0 Order</div>
-          <p class="text-[10px] text-slate-400 mt-1">Transaksi Joki terdeteksi</p>
-        </div>
-        <div class="bg-slate-900/80 border border-slate-800 rounded-2xl p-4">
-          <span class="text-xs text-yellow-400 font-medium flex items-center gap-1.5"><i class="fa-solid fa-calculator"></i> Rata-Rata Per Order</span>
-          <div class="text-xl font-bold text-yellow-400 mt-2" id="stagingAvgAmount">Rp 0</div>
-          <p class="text-[10px] text-slate-400 mt-1">Nominal per transaksi</p>
-        </div>
-      </div>
+      <div id="stCards" class="hidden grid grid-cols-1 sm:grid-cols-3 gap-4"></div>
 
-      <!-- Action Toolbar -->
-      <div id="stagingActionsBar" class="hidden bg-slate-900/60 border border-slate-800 rounded-2xl p-4 flex flex-col md:flex-row items-center justify-between gap-3">
+      <div id="stBar" class="hidden card p-4 flex flex-col md:flex-row items-center justify-between gap-3">
         <div class="flex flex-wrap items-center gap-2 w-full md:w-auto">
-          <button onclick="autoFilterNonJoki()" class="bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30 font-medium text-xs px-3.5 py-2 rounded-xl transition flex items-center gap-2">
-            <i class="fa-solid fa-wand-magic-sparkles"></i> Hapus Otomatis Selain Joki
-          </button>
-          
-          <button onclick="deleteSelectedRows()" id="btnDeleteSelected" class="bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 border border-rose-500/30 font-medium text-xs px-3.5 py-2 rounded-xl transition hidden flex items-center gap-2">
-            <i class="fa-solid fa-trash-can"></i> Hapus Pilihan (<span id="selectedCount">0</span>)
-          </button>
+          <button onclick="autoFilterNonJoki()" class="btn btn-warn"><i class="fa-solid fa-wand-magic-sparkles"></i> Hapus Otomatis Selain Joki</button>
+          <button onclick="deleteSelectedRows()" id="btnDelSel" class="btn btn-danger hidden"><i class="fa-solid fa-trash-can"></i> Hapus Pilihan (<span id="selCount">0</span>)</button>
         </div>
-
-        <button onclick="sendDataToSheets()" id="btnSendData" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs px-6 py-2.5 rounded-xl transition shadow-lg shadow-emerald-600/20 flex items-center gap-2 w-full md:w-auto justify-center">
-          <i class="fa-solid fa-paper-plane"></i> Send Data ke Sheets
-        </button>
+        <button onclick="sendDataToSheets()" id="btnSend" class="btn btn-success w-full md:w-auto !px-6 !py-2.5"><i class="fa-solid fa-paper-plane"></i> Kirim ke Google Sheets</button>
       </div>
 
-      <!-- Staging Table -->
-      <div class="bg-slate-900/60 border border-slate-800 rounded-2xl overflow-hidden shadow-2xl">
-        <div class="overflow-x-auto">
-          <table class="w-full text-left text-xs text-slate-300">
-            <thead class="bg-slate-950/80 text-slate-400 uppercase text-[10px] tracking-wider border-b border-slate-800">
-              <tr>
-                <th class="p-4 text-center w-12">
-                  <input type="checkbox" id="selectAllCheckbox" class="row-checkbox" onchange="toggleSelectAll(this.checked)" />
-                </th>
-                <th class="p-4 whitespace-nowrap">Tanggal</th>
-                <th class="p-4">Keterangan Transaksi</th>
-                <th class="p-4">Tag Nama Pengirim</th>
-                <th class="p-4 text-right whitespace-nowrap">Nominal (CR)</th>
-                <th class="p-4 text-center w-20">Aksi</th>
-              </tr>
-            </thead>
-            <tbody id="stagingTableBody" class="divide-y divide-slate-800/60">
-              <tr>
-                <td colspan="6" class="p-16 text-center text-slate-500">
-                  <i class="fa-solid fa-cloud-arrow-up text-4xl mb-3 block opacity-30"></i>
-                  Silakan unggah file CSV mutasi BCA untuk memulai staging data joki.
-                </td>
-              </tr>
+      <div class="card overflow-hidden">
+        <div class="overflow-x-auto scroll-thin">
+          <table class="w-full text-xs text-left">
+            <thead><tr>
+              <th class="p-3 text-center w-12"><input type="checkbox" id="selectAll" class="row-checkbox" onchange="toggleSelectAll(this.checked)" /></th>
+              <th class="p-3 whitespace-nowrap">Tanggal</th>
+              <th class="p-3">Keterangan Transaksi</th>
+              <th class="p-3">Pengirim</th>
+              <th class="p-3 text-right whitespace-nowrap">Nominal (CR)</th>
+              <th class="p-3 text-center w-16">Aksi</th>
+            </tr></thead>
+            <tbody id="stBody">
+              <tr><td colspan="6" class="p-16 text-center muted"><i class="fa-solid fa-cloud-arrow-up text-4xl mb-3 block opacity-30"></i>Unggah file CSV mutasi BCA untuk memulai.</td></tr>
             </tbody>
           </table>
         </div>
+        <div id="stPager" class="hidden flex items-center justify-between text-xs p-3" style="border-top:1px solid var(--border)">
+          <span class="muted" id="stPageInfo"></span>
+          <div class="flex items-center gap-2">
+            <button class="btn btn-ghost" onclick="stGo(-1)"><i class="fa-solid fa-chevron-left"></i></button>
+            <button class="btn btn-ghost" onclick="stGo(1)"><i class="fa-solid fa-chevron-right"></i></button>
+          </div>
+        </div>
       </div>
     </section>
-
-    <!-- TAB 2: DASHBOARD ANALYTICS -->
-    <section id="tabDashboard" class="hidden space-y-6">
-
-      <!-- Loading State -->
-      <div id="dashLoading" class="hidden py-20 text-center text-slate-400">
-        <i class="fa-solid fa-spinner fa-spin text-4xl text-blue-500 mb-3 block"></i>
-        <span class="text-sm">Menghubungkan & memuat seluruh data dari Google Sheets...</span>
-      </div>
-
-      <!-- Dashboard Content -->
-      <div id="dashContent" class="space-y-6">
-        
-        <!-- Summary Analytics Cards -->
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          
-          <!-- All-Time Card -->
-          <div class="bg-slate-900/90 border border-slate-800 rounded-2xl p-5 shadow-sm">
-            <span class="text-xs text-purple-400 font-semibold flex items-center gap-2"><i class="fa-solid fa-trophy"></i> Total Bisnis All-Time</span>
-            <div class="text-2xl font-extrabold text-purple-300 mt-2" id="dashAllTime">Rp 0</div>
-            <p class="text-[10px] text-slate-400 mt-1" id="dashAllTimeCount">0 Order Terakumulasi</p>
-          </div>
-
-          <!-- Tahunan Card -->
-          <div class="bg-slate-900/90 border border-slate-800 rounded-2xl p-5 shadow-sm">
-            <span class="text-xs text-blue-400 font-semibold flex items-center gap-2"><i class="fa-solid fa-calendar-days"></i> Pendapatan Tahun Ini</span>
-            <div class="text-2xl font-extrabold text-white mt-2" id="dashThisYear">Rp 0</div>
-            <p class="text-[10px] text-slate-400 mt-1" id="dashCompareYear">vs Tahun Lalu: -</p>
-          </div>
-
-          <!-- Bulanan Card -->
-          <div class="bg-slate-900/90 border border-slate-800 rounded-2xl p-5 shadow-sm">
-            <span class="text-xs text-emerald-400 font-semibold flex items-center gap-2"><i class="fa-solid fa-calendar-day"></i> Pendapatan Bulan Ini</span>
-            <div class="text-2xl font-extrabold text-emerald-400 mt-2" id="dashThisMonth">Rp 0</div>
-            <p class="text-[10px] text-slate-400 mt-1" id="dashCompareMonth">vs Bulan Lalu: -</p>
-          </div>
-
-          <!-- Mingguan Card -->
-          <div class="bg-slate-900/90 border border-slate-800 rounded-2xl p-5 shadow-sm">
-            <span class="text-xs text-amber-400 font-semibold flex items-center gap-2"><i class="fa-solid fa-bolt"></i> Pendapatan Minggu Ini</span>
-            <div class="text-2xl font-extrabold text-amber-300 mt-2" id="dashThisWeek">Rp 0</div>
-            <p class="text-[10px] text-slate-400 mt-1">7 Hari Terakhir</p>
-          </div>
-
-        </div>
-
-        <!-- Chart Section -->
-        <div class="bg-slate-900/90 border border-slate-800 rounded-2xl p-5 space-y-4">
-          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800 pb-3">
-            <div>
-              <h3 class="text-xs font-bold text-slate-200 uppercase tracking-wider flex items-center gap-2">
-                <i class="fa-solid fa-chart-area text-blue-400"></i> Tren Pertumbuhan Pendapatan Joki Bulanan (YoY)
-              </h3>
-            </div>
-            <select id="dashYearSelect" onchange="renderDashboardAnalytics()" class="bg-slate-950 border border-slate-800 rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none">
-              <!-- Dynamically Populated -->
-            </select>
-          </div>
-          <div class="h-72 w-full">
-            <canvas id="jokiIncomeChart"></canvas>
-          </div>
-        </div>
-
-        <!-- Tabbed Transaction History -->
-        <div class="bg-slate-900/80 border border-slate-800 rounded-2xl p-5 space-y-4">
-          <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-800 pb-4">
-            <div>
-              <h3 class="text-xs font-bold text-slate-200 uppercase tracking-wider flex items-center gap-2">
-                <i class="fa-solid fa-database text-emerald-400"></i> Data Transaksi Joki Per Bulan
-              </h3>
-              <p class="text-[11px] text-slate-400 mt-0.5">Pilih tab bulan di bawah untuk melihat rincian riwayat order joki</p>
-            </div>
-
-            <!-- Search Bar -->
-            <div class="relative w-full md:w-64">
-              <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
-              <input type="text" id="dashSearchInput" placeholder="Cari nama / keterangan..." oninput="renderSelectedMonthTable()"
-                class="w-full bg-slate-950 border border-slate-800 rounded-xl pl-9 pr-3 py-1.5 text-xs text-white focus:outline-none focus:border-blue-500 transition" />
-            </div>
-          </div>
-
-          <!-- Tabs Month Bar -->
-          <div id="monthTabsContainer" class="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-thin">
-            <!-- Dynamic Month Buttons -->
-          </div>
-
-          <!-- Month Summary Bar -->
-          <div class="bg-slate-950/80 border border-slate-800/80 rounded-xl p-3 flex items-center justify-between text-xs">
-            <span class="text-slate-400" id="monthSummaryTitle">Ringkasan Bulan</span>
-            <div class="flex items-center gap-4 font-semibold">
-              <span class="text-slate-300" id="monthSummaryCount">0 Order</span>
-              <span class="text-emerald-400 font-bold" id="monthSummaryAmount">Total: Rp 0</span>
-            </div>
-          </div>
-
-          <!-- Monthly Table -->
-          <div class="overflow-x-auto border border-slate-800 rounded-xl">
-            <table class="w-full text-left text-xs text-slate-300">
-              <thead class="bg-slate-950 text-slate-400 uppercase text-[10px] tracking-wider border-b border-slate-800">
-                <tr>
-                  <th class="p-3.5 whitespace-nowrap">Tanggal</th>
-                  <th class="p-3.5">Keterangan Mutasi</th>
-                  <th class="p-3.5">Pengirim (Tag Nama)</th>
-                  <th class="p-3.5 text-right whitespace-nowrap">Nominal (CR)</th>
-                </tr>
-              </thead>
-              <tbody id="dashMonthlyTableBody" class="divide-y divide-slate-800/50">
-                <tr>
-                  <td colspan="4" class="p-8 text-center text-slate-500">Silakan pilih tab bulan di atas.</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-      </div>
-    </section>
-
   </main>
 
+  <!-- MODAL -->
+  <div id="modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4" style="background:rgba(2,6,23,.6)" onclick="if(event.target===this)closeModal(false)">
+    <div id="modalBox" class="card max-w-md w-full p-5 shadow-2xl"></div>
+  </div>
+  <!-- TOAST -->
+  <div id="toasts" class="fixed bottom-4 right-4 z-[60] space-y-2 w-[calc(100%-2rem)] sm:w-80"></div>
+
   <script>
-    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzzo019Sn-tFUhIFFT9Atpv-r7MMbcQEOG7kLL4dr2esQgPj3aaETQZrIaVMrNwBGE95w/exec";
-    let currentPassword = localStorage.getItem("bca_joki_pass") || "ikmalsayang";
+  /* =====================================================================
+     KONFIGURASI & STATE
+  ===================================================================== */
+  const DEFAULT_URL = "https://script.google.com/macros/s/AKfycbzzo019Sn-tFUhIFFT9Atpv-r7MMbcQEOG7kLL4dr2esQgPj3aaETQZrIaVMrNwBGE95w/exec";
+  const CACHE_KEY = "joki_cache_v2";
+  const MONTHS = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
+  const DAYS = ['Sen','Sel','Rab','Kam','Jum','Sab','Min'];
+  const $ = id => document.getElementById(id);
 
-    let stagingTransactions = [];
-    let dbMonthlyData = {};
-    let activeMonthTab = "";
-    let incomeChartInstance = null;
+  let scriptUrl = ls('joki_url') || DEFAULT_URL;
+  let password = ls('bca_joki_pass') || '';
 
-    document.addEventListener("DOMContentLoaded", () => {
-      if (!currentPassword) promptChangePassword();
+  let staging = [];
+  let stPage = 1; const ST_SIZE = 50;
+
+  let db = {};           // monthlyData mentah dari Sheets
+  let allTx = [];        // transaksi datar, urut terbaru
+  let monthSum = {}, monthCount = {}, dayMap = {};
+  let lastFetch = 0, lastStr = '', rendered = false, syncing = false;
+  const charts = {};
+  const tbl = { month: 'ALL', sortKey: 'ts', sortDir: -1, page: 1, size: 25 };
+
+  function ls(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
+  function lsSet(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
+  function lsDel(k) { try { localStorage.removeItem(k); } catch (e) {} }
+
+  /* =====================================================================
+     UTIL
+  ===================================================================== */
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+  const pad = n => String(n).padStart(2, '0');
+  function fmtRp(v, dec) {
+    const neg = v < 0; const a = Math.abs(v);
+    const s = new Intl.NumberFormat('id-ID', { minimumFractionDigits: dec ? 2 : 0, maximumFractionDigits: dec ? 2 : 0 }).format(dec ? a : Math.round(a));
+    return (neg ? '-' : '') + 'Rp ' + s;
+  }
+  function fmtSigned(v) { return (v > 0 ? '+' : '') + fmtRp(v); }
+  function fmtCompact(v) {
+    const a = Math.abs(v), s = v < 0 ? '-' : '';
+    if (a >= 1e9) return s + (a / 1e9).toFixed(1).replace('.', ',') + ' M';
+    if (a >= 1e6) return s + (a / 1e6).toFixed(1).replace('.', ',').replace(',0', '') + ' jt';
+    if (a >= 1e3) return s + Math.round(a / 1e3) + ' rb';
+    return s + Math.round(a);
+  }
+  const fmtDate = d => `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()}`;
+  const today = () => { const n = new Date(); return new Date(n.getFullYear(), n.getMonth(), n.getDate()); };
+  const addDays = (d, n) => new Date(d.getFullYear(), d.getMonth(), d.getDate() + n);
+  const daysInMonth = (y, m0) => new Date(y, m0 + 1, 0).getDate();
+  const daysBetween = (a, b) => Math.round((b - a) / 864e5);
+  const ymKey = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}`;
+  const mondayOf = d => addDays(d, -((d.getDay() + 6) % 7));
+  const cssVar = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+
+  function pctChange(cur, prev) { if (!prev) return null; return (cur - prev) / prev * 100; }
+  function delta(cur, prev) {
+    if (!prev && !cur) return `<span class="delta-flat font-semibold">0%</span>`;
+    if (!prev) return `<span class="delta-up font-semibold"><i class="fa-solid fa-arrow-up"></i> baru</span>`;
+    const p = pctChange(cur, prev);
+    const cls = p > 0.05 ? 'delta-up' : p < -0.05 ? 'delta-down' : 'delta-flat';
+    const ic = p > 0.05 ? 'fa-arrow-trend-up' : p < -0.05 ? 'fa-arrow-trend-down' : 'fa-minus';
+    return `<span class="${cls} font-semibold"><i class="fa-solid ${ic}"></i> ${p > 0 ? '+' : ''}${p.toFixed(1).replace('.', ',')}%</span>`;
+  }
+
+  /* ---------- Toast & Modal ---------- */
+  function toast(msg, type = 'info') {
+    const colors = { info: '#3b82f6', success: '#10b981', error: '#f43f5e', warn: '#f59e0b' };
+    const icons = { info: 'fa-circle-info', success: 'fa-circle-check', error: 'fa-circle-exclamation', warn: 'fa-triangle-exclamation' };
+    const el = document.createElement('div');
+    el.className = 'toast card px-4 py-3 text-xs flex items-start gap-3 shadow-xl';
+    el.style.borderLeft = `4px solid ${colors[type]}`;
+    el.innerHTML = `<i class="fa-solid ${icons[type]} mt-0.5" style="color:${colors[type]}"></i><span class="flex-1">${esc(msg)}</span>`;
+    $('toasts').appendChild(el);
+    setTimeout(() => { el.style.opacity = '0'; el.style.transition = 'opacity .3s'; setTimeout(() => el.remove(), 300); }, type === 'error' ? 6000 : 3500);
+  }
+  let modalResolve = null;
+  function openModal(html) { $('modalBox').innerHTML = html; $('modal').classList.remove('hidden'); }
+  function closeModal(val) { $('modal').classList.add('hidden'); if (modalResolve) { modalResolve(val === true); modalResolve = null; } }
+  function confirmDialog(title, msg, okLabel = 'Ya, lanjut') {
+    return new Promise(res => {
+      modalResolve = res;
+      openModal(`<h3 class="font-bold text-sm mb-1">${esc(title)}</h3><p class="text-xs muted mb-5">${esc(msg)}</p>
+        <div class="flex justify-end gap-2"><button class="btn btn-ghost" onclick="closeModal(false)">Batal</button><button class="btn btn-primary" onclick="closeModal(true)">${esc(okLabel)}</button></div>`);
     });
+  }
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && !$('modal').classList.contains('hidden')) closeModal(false); });
 
-    function promptChangePassword() {
-      const pass = prompt("Masukkan Password API Google Apps Script:", currentPassword || "ikmalsayang");
-      if (pass !== null && pass.trim() !== "") {
-        currentPassword = pass.trim();
-        localStorage.setItem("bca_joki_pass", currentPassword);
-        alert("Password tersimpan secara lokal!");
-      }
-    }
+  function openSettings() {
+    openModal(`<h3 class="font-bold text-sm mb-4"><i class="fa-solid fa-gear me-2"></i>Pengaturan</h3>
+      <label class="text-xs font-semibold block mb-1">Password API</label>
+      <div class="flex gap-2 mb-1"><input id="setPass" type="password" class="input flex-1" value="${esc(password)}" placeholder="Sama dengan API_PASSWORD di Apps Script" />
+        <button class="btn btn-ghost !px-3" onclick="const i=$('setPass');i.type=i.type==='password'?'text':'password'"><i class="fa-solid fa-eye"></i></button></div>
+      <p class="text-[11px] muted mb-4">Disimpan hanya di browser ini.</p>
+      <label class="text-xs font-semibold block mb-1">URL Apps Script (/exec)</label>
+      <input id="setUrl" type="text" class="input w-full mb-5" value="${esc(scriptUrl)}" />
+      <div class="flex flex-wrap justify-between gap-2">
+        <button class="btn btn-ghost" onclick="clearLocalCache()"><i class="fa-solid fa-broom"></i> Hapus cache lokal</button>
+        <div class="flex gap-2"><button class="btn btn-ghost" onclick="closeModal(false)">Tutup</button><button class="btn btn-primary" onclick="saveSettings()">Simpan</button></div>
+      </div>`);
+  }
+  function saveSettings() {
+    const p = $('setPass').value.trim(), u = $('setUrl').value.trim();
+    const changed = p !== password || (u && u !== scriptUrl);
+    password = p; lsSet('bca_joki_pass', p);
+    if (u) { scriptUrl = u; lsSet('joki_url', u); }
+    closeModal(false);
+    toast('Pengaturan tersimpan', 'success');
+    if (changed) { lsDel(CACHE_KEY); lastFetch = 0; if (!$('tabDashboard').classList.contains('hidden')) loadDashboard(true); }
+  }
+  function clearLocalCache() { lsDel(CACHE_KEY); lastFetch = 0; toast('Cache lokal dihapus', 'success'); }
 
-    function switchTab(tab) {
-      const btnStaging = document.getElementById("tabBtnStaging");
-      const btnDash = document.getElementById("tabBtnDashboard");
-      const tabStaging = document.getElementById("tabStaging");
-      const tabDashboard = document.getElementById("tabDashboard");
+  /* ---------- Tema ---------- */
+  function applyThemeIcon() { $('themeIcon').className = 'fa-solid ' + (document.documentElement.classList.contains('dark') ? 'fa-sun' : 'fa-moon'); }
+  function toggleTheme() {
+    const dark = document.documentElement.classList.toggle('dark');
+    lsSet('joki_theme', dark ? 'dark' : 'light');
+    applyThemeIcon();
+    if (allTx.length) renderCharts();
+  }
 
-      if (tab === "staging") {
-        btnStaging.className = "px-4 py-2 rounded-lg text-xs font-semibold bg-blue-600 text-white shadow-lg transition flex items-center gap-2";
-        btnDash.className = "px-4 py-2 rounded-lg text-xs font-semibold bg-slate-800 text-slate-300 hover:bg-slate-700 transition flex items-center gap-2";
-        tabStaging.classList.remove("hidden");
-        tabDashboard.classList.add("hidden");
-      } else {
-        btnDash.className = "px-4 py-2 rounded-lg text-xs font-semibold bg-blue-600 text-white shadow-lg transition flex items-center gap-2";
-        btnStaging.className = "px-4 py-2 rounded-lg text-xs font-semibold bg-slate-800 text-slate-300 hover:bg-slate-700 transition flex items-center gap-2";
-        tabDashboard.classList.remove("hidden");
-        tabStaging.classList.add("hidden");
+  /* ---------- Tab ---------- */
+  function switchTab(tab) {
+    const dash = tab === 'dashboard';
+    $('tabDashboard').classList.toggle('hidden', !dash);
+    $('tabStaging').classList.toggle('hidden', dash);
+    $('tabBtnDashboard').classList.toggle('active', dash);
+    $('tabBtnStaging').classList.toggle('active', !dash);
+    if (dash) loadDashboard(false);
+  }
 
-        loadDashboardData();
-      }
-    }
-
-    function extractName(ket) {
-      let match = ket.match(/BI-FAST.*?DR\s+\d+\s+([A-Z\s]+)$/i);
-      if (match) return match[1].trim();
-
-      match = ket.match(/(?:TRSF E-BANKING|TRANSFER).*?\d+\.\d{2}\s+([A-Z\s]{3,})/i);
-      if (match) return match[1].trim();
-
-      match = ket.match(/QR[C\s]\s*\d+\s+[\d\.]+\s*([A-Z0-9\s]+)$/i);
-      if (match) return match[1].trim();
-
-      match = ket.match(/\s([A-Z\s]{4,})$/i);
-      if (match && !ket.includes('BIAYA ADM') && !ket.includes('TARIKAN ATM')) {
-        const name = match[1].trim();
-        if (name.length > 3 && !['INDONESIA', 'REGUL'].includes(name)) return name;
-      }
-      return 'Lainnya';
-    }
-
-    function formatCurrency(val, hideDecimals) {
-      return new Intl.NumberFormat('id-ID', {
-        style: 'currency',
-        currency: 'IDR',
-        minimumFractionDigits: hideDecimals ? 0 : 2,
-        maximumFractionDigits: hideDecimals ? 0 : 2
-      }).format(val);
-    }
-
-    function handleFileUpload(event) {
-      const file = event.target.files[0];
-      if (!file) return;
-
-      const reader = new FileReader();
-      reader.onload = function(e) {
-        parseBCACSVText(e.target.result);
-      };
-      reader.readAsText(file);
-    }
-
-    function parseBCACSVText(text) {
-      stagingTransactions = [];
-      const lines = text.split(/\r?\n/);
-
-      lines.forEach((line, idx) => {
-        if (!line.trim()) return;
-
-        const dateMatch = line.match(/^'(\d{2}\/\d{2}\/\d{4}|PEND),/);
-        if (dateMatch) {
-          const tanggal = dateMatch[1];
-          const rest = line.substring(dateMatch[0].length);
-          const parts = rest.split(',');
-
-          if (parts.length >= 4) {
-            const type = parts[parts.length - 2].trim().toUpperCase();
-            const saldo = parseFloat(parts[parts.length - 1]) || 0;
-            const amount = parseFloat(parts[parts.length - 3]) || 0;
-            const keterangan = parts.slice(0, parts.length - 3).join(',').replace(/^'/, '').trim();
-            const tagNama = extractName(keterangan);
-            
-            if (type === 'CR') {
-              const txId = `JOKI_${tanggal}_${amount}_${idx}`;
-              stagingTransactions.push({
-                id: txId,
-                tanggal,
-                keterangan,
-                tagNama,
-                type: 'CR',
-                amount,
-                saldo,
-                selected: false
-              });
-            }
-          }
-        }
+  /* =====================================================================
+     API
+  ===================================================================== */
+  async function api(action, extra = {}) {
+    if (!password) { openSettings(); throw new Error('Password API belum diatur.'); }
+    const ctrl = new AbortController();
+    const to = setTimeout(() => ctrl.abort(), 60000);
+    try {
+      const res = await fetch(scriptUrl, {
+        method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify(Object.assign({ action, password }, extra)), signal: ctrl.signal
       });
+      const json = await res.json();
+      if (json.status !== 'success') throw new Error(json.message || 'Permintaan gagal');
+      return json;
+    } catch (e) {
+      if (e.name === 'AbortError') throw new Error('Koneksi timeout. Coba lagi.');
+      throw e;
+    } finally { clearTimeout(to); }
+  }
 
-      renderStagingTable();
-    }
+  /* =====================================================================
+     DASHBOARD: LOAD (cache-first, refresh di latar belakang)
+  ===================================================================== */
+  function setSyncing(on) {
+    syncing = on;
+    $('refreshIcon').classList.toggle('fa-spin', on);
+    $('btnRefresh').disabled = on;
+    const chip = $('syncChip');
+    if (on) { chip.classList.remove('hidden'); chip.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Memperbarui...'; }
+  }
+  function setSyncDone(ts) {
+    const chip = $('syncChip');
+    chip.classList.remove('hidden');
+    chip.innerHTML = `<i class="fa-solid fa-circle-check"></i> Diperbarui ${new Date(ts).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}`;
+    $('headSync').textContent = 'Terakhir sinkron ' + new Date(ts).toLocaleString('id-ID', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
+  }
 
-    function renderStagingTable() {
-      const tbody = document.getElementById("stagingTableBody");
-      const actionsBar = document.getElementById("stagingActionsBar");
-      const summaryCards = document.getElementById("stagingCardsSummary");
-      const hideDecimals = document.getElementById("hideDecimals").checked;
-
-      if (stagingTransactions.length === 0) {
-        tbody.innerHTML = `
-          <tr>
-            <td colspan="6" class="p-16 text-center text-slate-500">
-              <i class="fa-solid fa-cloud-arrow-up text-4xl mb-3 block opacity-30"></i>
-              Tidak ada data staging. Silakan unggah file CSV mutasi BCA.
-            </td>
-          </tr>
-        `;
-        actionsBar.classList.add("hidden");
-        summaryCards.classList.add("hidden");
-        return;
-      }
-
-      actionsBar.classList.remove("hidden");
-      summaryCards.classList.remove("hidden");
-
-      let totalSum = 0;
-      stagingTransactions.forEach(t => totalSum += t.amount);
-
-      document.getElementById("stagingTotalAmount").textContent = formatCurrency(totalSum, hideDecimals);
-      document.getElementById("stagingTotalCount").textContent = `${stagingTransactions.length} Order`;
-      document.getElementById("stagingAvgAmount").textContent = formatCurrency(totalSum / stagingTransactions.length, hideDecimals);
-
-      tbody.innerHTML = stagingTransactions.map((tx, idx) => {
-        const isPEND = tx.tanggal === 'PEND';
-        const dateDisplay = isPEND 
-          ? `<span class="bg-amber-500/20 text-amber-300 border border-amber-500/30 px-2 py-0.5 rounded text-[10px] font-bold"><i class="fa-regular fa-clock me-1"></i>PENDING</span>` 
-          : tx.tanggal;
-
-        const rowBgClass = tx.selected 
-          ? "bg-blue-900/30 border-l-4 border-blue-500 font-medium shadow-md" 
-          : "hover:bg-slate-800/40 transition";
-
-        return `
-          <tr class="${rowBgClass}">
-            <td class="p-4 text-center">
-              <input type="checkbox" class="row-checkbox" ${tx.selected ? 'checked' : ''} onchange="toggleRowSelect(${idx}, this.checked)" />
-            </td>
-            <td class="p-4 whitespace-nowrap text-slate-400">${dateDisplay}</td>
-            <td class="p-4 max-w-xs break-words font-mono text-[11px] text-slate-300">${tx.keterangan}</td>
-            <td class="p-4 whitespace-nowrap">
-              <span class="bg-blue-500/10 text-blue-400 border border-blue-500/20 px-2.5 py-1 rounded-md text-[10px] font-medium">
-                <i class="fa-solid fa-user text-[9px] me-1.5"></i>${tx.tagNama}
-              </span>
-            </td>
-            <td class="p-4 text-right whitespace-nowrap text-emerald-400 font-semibold">
-              +${formatCurrency(tx.amount, hideDecimals)}
-            </td>
-            <td class="p-4 text-center whitespace-nowrap">
-              <button onclick="deleteRow(${idx})" class="text-rose-400 hover:text-rose-300 p-2 rounded-lg hover:bg-rose-500/10 transition" title="Hapus Baris Ini">
-                <i class="fa-solid fa-trash-can"></i>
-              </button>
-            </td>
-          </tr>
-        `;
-      }).join('');
-
-      updateSelectionUI();
-    }
-
-    function toggleRowSelect(idx, isChecked) {
-      stagingTransactions[idx].selected = isChecked;
-      renderStagingTable();
-    }
-
-    function toggleSelectAll(isChecked) {
-      stagingTransactions.forEach(tx => tx.selected = isChecked);
-      renderStagingTable();
-    }
-
-    function updateSelectionUI() {
-      const selectedCount = stagingTransactions.filter(t => t.selected).length;
-      const btnDeleteSelected = document.getElementById("btnDeleteSelected");
-      const selectedCountSpan = document.getElementById("selectedCount");
-
-      if (selectedCount > 0) {
-        btnDeleteSelected.classList.remove("hidden");
-        selectedCountSpan.textContent = selectedCount;
-      } else {
-        btnDeleteSelected.classList.add("hidden");
-      }
-    }
-
-    function deleteRow(idx) {
-      stagingTransactions.splice(idx, 1);
-      renderStagingTable();
-    }
-
-    function deleteSelectedRows() {
-      if (confirm("Hapus baris transaksi yang dicentang?")) {
-        stagingTransactions = stagingTransactions.filter(t => !t.selected);
-        renderStagingTable();
-      }
-    }
-
-    function autoFilterNonJoki() {
-      const initialCount = stagingTransactions.length;
-      stagingTransactions = stagingTransactions.filter(tx => tx.keterangan.toUpperCase().includes("JOKI"));
-      const deletedCount = initialCount - stagingTransactions.length;
-      alert(`Berhasil menghapus ${deletedCount} transaksi bukan JOKI.`);
-      renderStagingTable();
-    }
-
-    async function sendDataToSheets() {
-      if (stagingTransactions.length === 0) return;
-
-      const btn = document.getElementById('btnSendData');
-      btn.disabled = true;
-      btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin me-2"></i> Mengirim...`;
-
+  async function loadDashboard(force = false) {
+    if (syncing) return;
+    if (!rendered) {
       try {
-        const payload = {
-          password: currentPassword,
-          data: stagingTransactions
-        };
-
-        const response = await fetch(SCRIPT_URL, {
-          method: 'POST',
-          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-          body: JSON.stringify(payload)
-        });
-
-        const result = await response.json();
-
-        if (result.status === 'success') {
-          alert('Data pendapatan Joki berhasil disimpan ke Google Sheets!');
-          stagingTransactions = [];
-          renderStagingTable();
-          switchTab('dashboard');
-        } else {
-          alert('Gagal menyimpan: ' + result.message);
-        }
-      } catch (err) {
-        console.error(err);
-        alert('Koneksi Gagal! Pastikan URL Apps Script benar.');
-      } finally {
-        btn.disabled = false;
-        btn.innerHTML = `<i class="fa-solid fa-paper-plane me-2"></i> Send Data ke Sheets`;
-      }
+        const c = JSON.parse(ls(CACHE_KEY) || 'null');
+        if (c && c.data) { db = c.data; lastStr = JSON.stringify(c.data); renderAll(); setSyncDone(c.ts); }
+      } catch (e) {}
     }
+    if (!force && lastFetch && Date.now() - lastFetch < 60000) return;
 
-    async function loadDashboardData() {
-      const loadingElem = document.getElementById('dashLoading');
-      const contentElem = document.getElementById('dashContent');
-
-      loadingElem.classList.remove('hidden');
-      contentElem.classList.add('hidden');
-
-      try {
-        const url = `${SCRIPT_URL}?password=${encodeURIComponent(currentPassword)}`;
-        const response = await fetch(url);
-        const result = await response.json();
-
-        if (result.status === 'success') {
-          dbMonthlyData = result.data.monthlyData || {};
-          populateYearSelect();
-          populateMonthTabs();
-          renderDashboardAnalytics();
-          loadingElem.classList.add('hidden');
-          contentElem.classList.remove('hidden');
-        } else {
-          alert('Gagal memuat data: ' + result.message);
-        }
-      } catch (err) {
-        console.error(err);
-        alert('Gagal terhubung ke Google Sheets.');
-      }
+    setSyncing(true);
+    try {
+      const r = await api('get', { force });
+      lastFetch = Date.now();
+      const monthly = (r.data && r.data.monthlyData) || {};
+      const str = JSON.stringify(monthly);
+      if (str !== lastStr || !rendered) { db = monthly; lastStr = str; renderAll(); }
+      lsSet(CACHE_KEY, JSON.stringify({ ts: lastFetch, data: monthly }));
+      setSyncDone(lastFetch);
+    } catch (e) {
+      console.error(e);
+      toast('Gagal memuat data: ' + e.message, 'error');
+      if (!rendered) { $('dashSkeleton').classList.add('hidden'); $('dashEmpty').classList.remove('hidden'); }
+      $('syncChip').classList.add('hidden');
+    } finally {
+      setSyncing(false);
+      if (rendered) { /* chip sudah diperbarui oleh setSyncDone atau disembunyikan saat error */ }
     }
+  }
 
-    function populateYearSelect() {
-      const yearSelect = document.getElementById('dashYearSelect');
-      yearSelect.innerHTML = '';
-
-      const years = new Set();
-      Object.keys(dbMonthlyData).forEach(key => {
-        const y = key.split('-')[0];
-        if (y) years.add(y);
+  /* =====================================================================
+     DATA PREP
+  ===================================================================== */
+  function prepareData() {
+    allTx = []; monthSum = {}; monthCount = {}; dayMap = {};
+    const t = today();
+    Object.keys(db).forEach(key => {
+      const [y, m] = key.split('-').map(Number);
+      (db[key] || []).forEach(x => {
+        const mm = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(String(x.tanggal || ''));
+        let d;
+        if (mm) d = new Date(+mm[3], +mm[2] - 1, +mm[1]);
+        else d = (y === t.getFullYear() && m === t.getMonth() + 1) ? t : new Date(y, m - 1, 1);
+        const amount = Number(x.amount) || 0;
+        const tx = { id: x.id, tanggal: String(x.tanggal || ''), keterangan: String(x.keterangan || ''), nama: String(x.tagNama || 'Lainnya'), amount, date: d, ts: d.getTime(), pend: !mm };
+        allTx.push(tx);
+        const k = ymKey(d);
+        monthSum[k] = (monthSum[k] || 0) + amount; monthCount[k] = (monthCount[k] || 0) + 1;
+        const dm = dayMap[tx.ts] || (dayMap[tx.ts] = { sum: 0, count: 0 });
+        dm.sum += amount; dm.count++;
       });
+    });
+    allTx.sort((a, b) => b.ts - a.ts);
+  }
 
-      const currentYear = new Date().getFullYear().toString();
-      years.add(currentYear);
+  function sumRange(s, e) {
+    const a = s.getTime(), b = e.getTime(); let sum = 0, count = 0;
+    for (let i = 0; i < allTx.length; i++) { const t = allTx[i]; if (t.ts >= a && t.ts <= b) { sum += t.amount; count++; } }
+    return { sum, count };
+  }
 
-      const sortedYears = Array.from(years).sort().reverse();
-      sortedYears.forEach(y => {
-        const opt = document.createElement('option');
-        opt.value = y;
-        opt.textContent = `Tahun ${y}`;
-        yearSelect.appendChild(opt);
-      });
+  /* =====================================================================
+     RENDER ALL
+  ===================================================================== */
+  function renderAll() {
+    prepareData();
+    $('dashSkeleton').classList.add('hidden');
+    if (!allTx.length) { $('dashContent').classList.add('hidden'); $('dashEmpty').classList.remove('hidden'); rendered = true; return; }
+    $('dashEmpty').classList.add('hidden'); $('dashContent').classList.remove('hidden');
+    rendered = true;
+    $('dataFresh').textContent = `Data tercatat terakhir: ${fmtDate(allTx[0].date)} · ${allTx.length.toLocaleString('id-ID')} order`;
+    populateYears();
+    initPeriodInputs();
+    renderKPIs(); renderInsights(); renderTarget(); renderRanking(); renderHeatmap();
+    renderCharts();
+    populateMonthTabs(); renderTable();
+  }
+  function renderCharts() { setChartTheme(); renderCompare(); renderTrend(); renderAnalysis(); }
+
+  function setChartTheme() {
+    Chart.defaults.color = cssVar('--muted');
+    Chart.defaults.borderColor = cssVar('--grid');
+    Chart.defaults.font.family = 'Inter, ui-sans-serif, system-ui, sans-serif';
+    Chart.defaults.font.size = 11;
+  }
+  function mkChart(id, cfg) { if (charts[id]) charts[id].destroy(); charts[id] = new Chart($(id).getContext('2d'), cfg); }
+  function baseOpts() {
+    return {
+      responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false },
+      plugins: { legend: { labels: { boxWidth: 10, usePointStyle: true } }, tooltip: { callbacks: { label: c => `${c.dataset.label}: ${fmtRp(c.parsed.y)}` } } },
+      scales: { x: { grid: { display: false } }, y: { beginAtZero: true, grid: { color: cssVar('--grid') }, ticks: { callback: v => fmtCompact(v) } } }
+    };
+  }
+  const C = { blue: '#3b82f6', gray: '#94a3b8', amber: '#f59e0b', green: '#10b981', rose: '#f43f5e', purple: '#8b5cf6' };
+
+  /* =====================================================================
+     KPI
+  ===================================================================== */
+  function kpi(o) {
+    return `<div class="card p-4"><div class="flex items-center justify-between"><span class="text-[11px] font-semibold muted uppercase tracking-wide">${o.label}</span>
+      <span class="w-8 h-8 rounded-lg flex items-center justify-center bg-${o.color}-500/10 text-${o.color}-500"><i class="fa-solid ${o.icon} text-sm"></i></span></div>
+      <div class="text-2xl font-extrabold mt-2 tracking-tight">${o.value}</div>
+      <div class="text-[11px] mt-1 flex flex-wrap items-center gap-x-2">${o.badge || ''}<span class="muted">${o.sub || ''}</span></div></div>`;
+  }
+  let K = {};
+  function computeK() {
+    const t = today(), y = t.getFullYear(), m = t.getMonth(), d = t.getDate();
+    const all = { sum: allTx.reduce((a, x) => a + x.amount, 0), count: allTx.length };
+    const ytd = sumRange(new Date(y, 0, 1), t);
+    const ytdPrev = sumRange(new Date(y - 1, 0, 1), new Date(y - 1, m, d));
+    const mtd = sumRange(new Date(y, m, 1), t);
+    const pmDays = daysInMonth(y, m - 1 < 0 ? 11 : m - 1);
+    const mtdPrev = sumRange(new Date(y, m - 1, 1), new Date(y, m - 1, Math.min(d, pmDays)));
+    const lastMonth = sumRange(new Date(y, m - 1, 1), new Date(y, m, 0));
+    const wk = sumRange(addDays(t, -6), t), wkPrev = sumRange(addDays(t, -13), addDays(t, -7));
+    const dim = daysInMonth(y, m);
+    const projMonth = d ? mtd.sum / d * dim : 0;
+    const doy = daysBetween(new Date(y, 0, 1), t) + 1;
+    const diy = (new Date(y, 11, 31) - new Date(y, 0, 1)) / 864e5 + 1;
+    const projYear = ytd.sum / doy * diy;
+    const wd = Array(7).fill(0); allTx.forEach(x => wd[(x.date.getDay() + 6) % 7] += x.amount);
+    const bestWd = wd.indexOf(Math.max(...wd));
+    const sameMonthLY = sumRange(new Date(y - 1, m, 1), new Date(y - 1, m, Math.min(d, daysInMonth(y - 1, m))));
+    K = { t, y, m, d, dim, all, ytd, ytdPrev, mtd, mtdPrev, lastMonth, wk, wkPrev, projMonth, projYear, wd, bestWd, sameMonthLY };
+  }
+
+  function renderKPIs() {
+    computeK();
+    const { all, ytd, ytdPrev, mtd, mtdPrev, wk, wkPrev, lastMonth, projMonth, projYear, d, dim, y, m } = K;
+    $('kpiRow1').innerHTML = [
+      kpi({ label: 'Total All-Time', icon: 'fa-trophy', color: 'purple', value: fmtRp(all.sum), sub: `${all.count.toLocaleString('id-ID')} order terakumulasi` }),
+      kpi({ label: `Tahun ${y} (YTD)`, icon: 'fa-calendar-days', color: 'blue', value: fmtRp(ytd.sum), badge: delta(ytd.sum, ytdPrev.sum), sub: `vs YTD ${y - 1}: ${fmtRp(ytdPrev.sum)}` }),
+      kpi({ label: `Bulan Ini (${MONTHS[m]})`, icon: 'fa-calendar-day', color: 'emerald', value: fmtRp(mtd.sum), badge: delta(mtd.sum, mtdPrev.sum), sub: `vs bulan lalu s/d tgl ${d}: ${fmtRp(mtdPrev.sum)}` }),
+      kpi({ label: 'Minggu Ini (7 Hari)', icon: 'fa-bolt', color: 'amber', value: fmtRp(wk.sum), badge: delta(wk.sum, wkPrev.sum), sub: `vs 7 hari sebelumnya: ${fmtRp(wkPrev.sum)}` })
+    ].join('');
+
+    const aovNow = mtd.count ? mtd.sum / mtd.count : 0, aovPrev = mtdPrev.count ? mtdPrev.sum / mtdPrev.count : 0;
+    const wdTotal = K.wd.reduce((a, b) => a + b, 0) || 1;
+    $('kpiRow2').innerHTML = [
+      kpi({ label: 'Proyeksi Akhir Bulan', icon: 'fa-forward', color: 'emerald', value: fmtRp(projMonth), badge: delta(projMonth, lastMonth.sum), sub: `laju harian ${fmtRp(d ? mtd.sum / d : 0)} · bulan lalu ${fmtRp(lastMonth.sum)}` }),
+      kpi({ label: `Proyeksi Akhir ${y}`, icon: 'fa-forward-fast', color: 'blue', value: fmtRp(projYear), sub: 'estimasi run-rate dari data tercatat' }),
+      kpi({ label: 'Rata-rata per Order', icon: 'fa-calculator', color: 'amber', value: fmtRp(aovNow), badge: delta(aovNow, aovPrev), sub: `${mtd.count} order bulan ini` }),
+      kpi({ label: 'Hari Terbaik', icon: 'fa-star', color: 'rose', value: ['Senin','Selasa','Rabu','Kamis','Jumat','Sabtu','Minggu'][K.bestWd], sub: `${(K.wd[K.bestWd] / wdTotal * 100).toFixed(0)}% dari seluruh pendapatan` })
+    ].join('');
+  }
+
+  /* =====================================================================
+     INSIGHT
+  ===================================================================== */
+  function renderInsights() {
+    const { mtd, mtdPrev, ytd, ytdPrev, projMonth, lastMonth, d, y, bestWd } = K;
+    const items = [];
+    const pct = (a, b) => { const p = pctChange(a, b); return p == null ? null : Math.abs(p).toFixed(1).replace('.', ',') + '%'; };
+    const p1 = pct(mtd.sum, mtdPrev.sum);
+    if (p1) items.push([mtd.sum >= mtdPrev.sum ? 'up' : 'down', `Pendapatan bulan ini (s/d tgl ${d}) <b>${fmtRp(mtd.sum)}</b>, ${mtd.sum >= mtdPrev.sum ? 'naik' : 'turun'} <b>${p1}</b> dibanding periode sama bulan lalu.`]);
+    else if (mtd.sum > 0) items.push(['up', `Bulan ini sudah masuk <b>${fmtRp(mtd.sum)}</b>, sementara periode sama bulan lalu belum ada pendapatan.`]);
+    const p2 = pct(ytd.sum, ytdPrev.sum);
+    if (p2) items.push([ytd.sum >= ytdPrev.sum ? 'up' : 'down', `Sepanjang ${y} (YTD) bisnis ${ytd.sum >= ytdPrev.sum ? 'tumbuh' : 'turun'} <b>${p2}</b> dibanding periode sama ${y - 1}.`]);
+    const p3 = pct(projMonth, lastMonth.sum);
+    if (p3 && lastMonth.sum > 0) items.push(['info', `Dengan laju saat ini, bulan ini diproyeksikan <b>${fmtRp(projMonth)}</b> (${projMonth >= lastMonth.sum ? '+' : '-'}${p3} dari total bulan lalu).`]);
+    items.push(['info', `Hari paling menguntungkan: <b>${['Senin','Selasa','Rabu','Kamis','Jumat','Sabtu','Minggu'][bestWd]}</b>.`]);
+    const months = Object.keys(monthSum).sort((a, b) => monthSum[b] - monthSum[a]);
+    if (months.length) { const [yy, mm] = months[0].split('-'); items.push(['up', `Bulan terbaik sepanjang waktu: <b>${MONTHS[+mm - 1]} ${yy}</b> dengan <b>${fmtRp(monthSum[months[0]])}</b>.`]); }
+    const we = (K.wd[5] + K.wd[6]) / (K.wd.reduce((a, b) => a + b, 0) || 1) * 100;
+    items.push(['info', `<b>${we.toFixed(0)}%</b> pendapatan berasal dari akhir pekan (Sabtu-Minggu).`]);
+    const gap = daysBetween(allTx[0].date, K.t);
+    if (gap > 3) items.push(['warn', `Order terakhir tercatat <b>${gap} hari lalu</b>. Pastikan mutasi terbaru sudah diupload agar angka akurat.`]);
+    const cfg = { up: ['fa-arrow-trend-up', 'text-emerald-500'], down: ['fa-arrow-trend-down', 'text-rose-500'], info: ['fa-circle-info', 'text-blue-500'], warn: ['fa-triangle-exclamation', 'text-amber-500'] };
+    $('insightList').innerHTML = items.map(([t, h]) => `<li class="flex gap-3 items-start"><i class="fa-solid ${cfg[t][0]} ${cfg[t][1]} mt-0.5"></i><span>${h}</span></li>`).join('');
+  }
+
+  /* =====================================================================
+     PERBANDINGAN
+  ===================================================================== */
+  function populateYears() {
+    const sel = $('yearSelect'), prevVal = sel.value;
+    const years = new Set(allTx.map(x => x.date.getFullYear())); years.add(new Date().getFullYear());
+    const arr = Array.from(years).sort((a, b) => b - a);
+    sel.innerHTML = arr.map(y => `<option value="${y}">${y}</option>`).join('');
+    if (prevVal && arr.includes(+prevVal)) sel.value = prevVal;
+  }
+  function cmpCard(title, icon, color, cur, prev, sub, isCount) {
+    const f = v => isCount ? v.toLocaleString('id-ID') + ' order' : fmtRp(v);
+    const diff = cur - prev;
+    return kpi({ label: title, icon, color, value: f(cur), badge: delta(cur, prev), sub: `${sub} · ${f(prev)} (${diff >= 0 ? '+' : '-'}${isCount ? Math.abs(diff) : fmtRp(Math.abs(diff))})` });
+  }
+  function renderCompare() {
+    const yr = +$('yearSelect').value, py = yr - 1;
+    const { t, y, m, d } = K;
+    const cur = Array(12).fill(0), prev = Array(12).fill(0), curN = Array(12).fill(0), prevN = Array(12).fill(0);
+    allTx.forEach(x => { const yy = x.date.getFullYear(), mm = x.date.getMonth(); if (yy === yr) { cur[mm] += x.amount; curN[mm]++; } else if (yy === py) { prev[mm] += x.amount; prevN[mm]++; } });
+
+    // kartu perbandingan
+    let a, b, lbl;
+    if (yr === y) { a = K.ytd; b = K.ytdPrev; lbl = `s/d ${d} ${MONTHS[m]}`; }
+    else { a = sumRange(new Date(yr, 0, 1), new Date(yr, 11, 31)); b = sumRange(new Date(py, 0, 1), new Date(py, 11, 31)); lbl = 'setahun penuh'; }
+    $('cmpCards').innerHTML = [
+      cmpCard(`${yr} vs ${py}`, 'fa-code-compare', 'blue', a.sum, b.sum, `${lbl} (${py})`),
+      cmpCard('Bulan Ini vs Bulan Lalu', 'fa-arrows-left-right', 'emerald', K.mtd.sum, K.mtdPrev.sum, `s/d tgl ${d}`),
+      cmpCard(`${MONTHS[m]} ${y} vs ${MONTHS[m]} ${y - 1}`, 'fa-calendar-check', 'purple', K.mtd.sum, K.sameMonthLY.sum, `s/d tgl ${d}`),
+      cmpCard(`Jumlah Order ${yr} vs ${py}`, 'fa-receipt', 'amber', a.count, b.count, lbl, true)
+    ].join('');
+
+    // chart YoY bar
+    const o1 = baseOpts();
+    mkChart('chYoY', { type: 'bar', data: { labels: MONTHS, datasets: [
+      { label: String(py), data: prev, backgroundColor: C.gray + '99', borderRadius: 4 },
+      { label: String(yr), data: cur, backgroundColor: C.blue, borderRadius: 4 }] }, options: o1 });
+
+    // kumulatif
+    const cumulate = (arr, limit) => { let s = 0; return arr.map((v, i) => { if (limit != null && i > limit) return null; s += v; return s; }); };
+    const limit = yr === y ? m : null;
+    const o2 = baseOpts(); o2.scales.x.grid.display = false;
+    mkChart('chCum', { type: 'line', data: { labels: MONTHS, datasets: [
+      { label: String(py), data: cumulate(prev), borderColor: C.gray, borderDash: [5, 4], borderWidth: 2, tension: .3, pointRadius: 2 },
+      { label: String(yr), data: cumulate(cur, limit), borderColor: C.green, backgroundColor: C.green + '22', fill: true, borderWidth: 3, tension: .3, pointRadius: 3 }] }, options: o2 });
+
+    // tabel
+    $('thPrevYear').textContent = py; $('thCurYear').textContent = yr;
+    let tp = 0, tc = 0, tn = 0;
+    const rows = MONTHS.map((nm, i) => {
+      const future = yr === y && i > m;
+      tp += prev[i]; if (!future) { tc += cur[i]; tn += curN[i]; }
+      if (future) return `<tr><td class="p-3 font-medium">${nm}</td><td class="p-3 text-right muted">${fmtRp(prev[i])}</td><td class="p-3 text-right muted">-</td><td class="p-3 text-right muted">-</td><td class="p-3 text-right muted">-</td><td class="p-3 text-right muted">-</td></tr>`;
+      const diff = cur[i] - prev[i];
+      return `<tr><td class="p-3 font-medium">${nm}</td><td class="p-3 text-right muted">${fmtRp(prev[i])}</td><td class="p-3 text-right font-semibold">${fmtRp(cur[i])}</td>
+        <td class="p-3 text-right ${diff > 0 ? 'delta-up' : diff < 0 ? 'delta-down' : 'delta-flat'}">${fmtSigned(diff)}</td><td class="p-3 text-right">${delta(cur[i], prev[i])}</td><td class="p-3 text-right muted">${curN[i]}</td></tr>`;
+    });
+    const tpFair = yr === y ? prev.slice(0, m + 1).reduce((a, b) => a + b, 0) : tp;
+    const dt = tc - tpFair;
+    rows.push(`<tr style="background:var(--surface2)" class="font-bold"><td class="p-3">Total${yr === y ? ' (s/d bulan ini)' : ''}</td><td class="p-3 text-right">${fmtRp(tpFair)}</td><td class="p-3 text-right">${fmtRp(tc)}</td>
+      <td class="p-3 text-right ${dt > 0 ? 'delta-up' : dt < 0 ? 'delta-down' : 'delta-flat'}">${fmtSigned(dt)}</td><td class="p-3 text-right">${delta(tc, tpFair)}</td><td class="p-3 text-right">${tn}</td></tr>`);
+    $('cmpTableBody').innerHTML = rows.join('');
+  }
+
+  /* =====================================================================
+     TREN 12 BULAN
+  ===================================================================== */
+  function renderTrend() {
+    const t = today(), labels = [], vals = [], cnts = [];
+    for (let i = 11; i >= 0; i--) {
+      const dt = new Date(t.getFullYear(), t.getMonth() - i, 1), k = ymKey(dt);
+      labels.push(MONTHS[dt.getMonth()] + ' ' + String(dt.getFullYear()).slice(2));
+      vals.push(monthSum[k] || 0); cnts.push(monthCount[k] || 0);
     }
+    const ma = vals.map((_, i) => { const s = vals.slice(Math.max(0, i - 2), i + 1); return s.reduce((a, b) => a + b, 0) / s.length; });
+    const avg = vals.reduce((a, b) => a + b, 0) / vals.length;
+    mkChart('chTrend', { type: 'bar', data: { labels, datasets: [
+      { type: 'bar', label: 'Pendapatan', data: vals, backgroundColor: C.blue + 'cc', borderRadius: 4, order: 3 },
+      { type: 'line', label: 'Rata-rata bergerak 3 bln', data: ma, borderColor: C.amber, borderWidth: 3, tension: .35, pointRadius: 2, order: 1 },
+      { type: 'line', label: 'Rata-rata 12 bln', data: vals.map(() => avg), borderColor: C.rose, borderDash: [6, 5], borderWidth: 1.5, pointRadius: 0, order: 2 }] }, options: baseOpts() });
 
-    function populateMonthTabs() {
-      const container = document.getElementById('monthTabsContainer');
-      container.innerHTML = '';
+    const aov = vals.map((v, i) => cnts[i] ? v / cnts[i] : 0);
+    const o = baseOpts();
+    o.plugins.tooltip.callbacks.label = c => c.dataset.yAxisID === 'y1' ? `${c.dataset.label}: ${fmtRp(c.parsed.y)}` : `${c.dataset.label}: ${c.parsed.y}`;
+    o.scales = { x: { grid: { display: false } },
+      y: { beginAtZero: true, grid: { color: cssVar('--grid') }, title: { display: true, text: 'Order' } },
+      y1: { beginAtZero: true, position: 'right', grid: { display: false }, ticks: { callback: v => fmtCompact(v) }, title: { display: true, text: 'Rata-rata' } } };
+    mkChart('chOrders', { type: 'bar', data: { labels, datasets: [
+      { type: 'bar', label: 'Jumlah order', data: cnts, backgroundColor: C.amber + '88', borderRadius: 4, yAxisID: 'y' },
+      { type: 'line', label: 'Rata-rata per order', data: aov, borderColor: C.purple, borderWidth: 3, tension: .35, pointRadius: 3, yAxisID: 'y1' }] }, options: o });
+  }
 
-      const sortedMonthKeys = Object.keys(dbMonthlyData).sort().reverse();
+  /* =====================================================================
+     ANALISA POLA (periode)
+  ===================================================================== */
+  function initPeriodInputs() {
+    if ($('anaFrom').value) return;
+    const t = today();
+    $('anaFrom').value = `${t.getFullYear()}-${pad(t.getMonth() + 1)}-01`;
+    $('anaTo').value = `${t.getFullYear()}-${pad(t.getMonth() + 1)}-${pad(t.getDate())}`;
+  }
+  function onPeriodChange() { $('anaCustom').classList.toggle('hidden', $('anaPeriod').value !== 'custom'); renderAnalysis(); }
+  const parseInputDate = v => { const p = (v || '').split('-').map(Number); return p.length === 3 && p[0] ? new Date(p[0], p[1] - 1, p[2]) : null; };
 
-      if (sortedMonthKeys.length === 0) {
-        container.innerHTML = `<span class="text-xs text-slate-500">Belum ada data bulanan tersimpan.</span>`;
-        activeMonthTab = "";
-        return;
-      }
-
-      if (!activeMonthTab || !dbMonthlyData[activeMonthTab]) {
-        activeMonthTab = sortedMonthKeys[0];
-      }
-
-      sortedMonthKeys.forEach(mKey => {
-        const btn = document.createElement('button');
-        const isActive = mKey === activeMonthTab;
-
-        btn.className = `px-3.5 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition flex items-center gap-1.5 ${
-          isActive 
-            ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20' 
-            : 'bg-slate-950 text-slate-400 hover:bg-slate-800 border border-slate-800'
-        }`;
-
-        btn.innerHTML = `<i class="fa-solid fa-calendar text-[10px]"></i> ${mKey}`;
-        btn.onclick = () => {
-          activeMonthTab = mKey;
-          populateMonthTabs();
-          renderSelectedMonthTable();
-        };
-        container.appendChild(btn);
-      });
-
-      renderSelectedMonthTable();
+  function getRange() {
+    const t = today(), y = t.getFullYear(), m = t.getMonth(), d = t.getDate(), mode = $('anaPeriod').value;
+    let s, e = t, ps = null, pe = null, label;
+    const lenPrev = n => { pe = addDays(s, -1); ps = addDays(s, -n); };
+    if (mode === '7') { s = addDays(t, -6); lenPrev(7); label = '7 hari terakhir'; }
+    else if (mode === '30') { s = addDays(t, -29); lenPrev(30); label = '30 hari terakhir'; }
+    else if (mode === 'month') { s = new Date(y, m, 1); ps = new Date(y, m - 1, 1); pe = new Date(y, m - 1, Math.min(d, daysInMonth(y, (m + 11) % 12))); label = `${MONTHS[m]} ${y} (s/d hari ini)`; }
+    else if (mode === 'year') { s = new Date(y, 0, 1); ps = new Date(y - 1, 0, 1); pe = new Date(y - 1, m, d); label = `Tahun ${y} (s/d hari ini)`; }
+    else if (mode === 'all') { s = allTx[allTx.length - 1].date; label = 'Seluruh data'; }
+    else {
+      s = parseInputDate($('anaFrom').value) || addDays(t, -29); e = parseInputDate($('anaTo').value) || t;
+      if (e < s) { const x = s; s = e; e = x; }
+      lenPrev(daysBetween(s, e) + 1); label = `${fmtDate(s)} - ${fmtDate(e)}`;
     }
+    return { s, e, ps, pe, label, days: daysBetween(s, e) + 1 };
+  }
 
-    function renderDashboardAnalytics() {
-      const selectedYear = document.getElementById('dashYearSelect').value || new Date().getFullYear().toString();
-      const hideDecimals = true;
+  function renderAnalysis() {
+    const R = getRange();
+    $('anaLabel').textContent = R.label + (R.ps ? ` · dibanding ${fmtDate(R.ps)} - ${fmtDate(R.pe)}` : '');
+    const cur = sumRange(R.s, R.e), prv = R.ps ? sumRange(R.ps, R.pe) : null;
+    const aov = cur.count ? cur.sum / cur.count : 0, aovP = prv && prv.count ? prv.sum / prv.count : 0;
+    const perDay = cur.sum / R.days, perDayP = prv ? prv.sum / (daysBetween(R.ps, R.pe) + 1) : 0;
+    const bd = (c, p) => prv ? delta(c, p) : '';
+    $('anaCards').innerHTML = [
+      kpi({ label: 'Total Pendapatan', icon: 'fa-money-bill-wave', color: 'emerald', value: fmtRp(cur.sum), badge: bd(cur.sum, prv && prv.sum), sub: prv ? `sebelumnya ${fmtRp(prv.sum)}` : 'periode terpilih' }),
+      kpi({ label: 'Jumlah Order', icon: 'fa-receipt', color: 'blue', value: cur.count.toLocaleString('id-ID'), badge: bd(cur.count, prv && prv.count), sub: prv ? `sebelumnya ${prv.count}` : 'order' }),
+      kpi({ label: 'Rata-rata per Order', icon: 'fa-calculator', color: 'amber', value: fmtRp(aov), badge: bd(aov, aovP), sub: prv ? `sebelumnya ${fmtRp(aovP)}` : '' }),
+      kpi({ label: 'Rata-rata per Hari', icon: 'fa-sun', color: 'purple', value: fmtRp(perDay), badge: bd(perDay, perDayP), sub: `${R.days} hari` })
+    ].join('');
 
-      const now = new Date();
-      const currYear = now.getFullYear().toString();
-      const currMonthNum = String(now.getMonth() + 1).padStart(2, '0');
-      const prevMonthNum = String(now.getMonth() === 0 ? 12 : now.getMonth()).padStart(2, '0');
-      const prevYearForMonth = now.getMonth() === 0 ? (now.getFullYear() - 1).toString() : currYear;
+    const list = allTx.filter(x => x.ts >= R.s.getTime() && x.ts <= R.e.getTime());
 
-      const currMonthKey = `${currYear}-${currMonthNum}`;
-      const prevMonthKey = `${prevYearForMonth}-${prevMonthNum}`;
-      const prevYearStr = (parseInt(selectedYear) - 1).toString();
-
-      let allTimeTotal = 0;
-      let allTimeCount = 0;
-      let thisMonthTotal = 0;
-      let lastMonthTotal = 0;
-      let thisYearTotal = 0;
-      let lastYearTotal = 0;
-      let thisWeekTotal = 0;
-
-      const monthlyChartDataCurr = Array(12).fill(0);
-      const monthlyChartDataPrev = Array(12).fill(0);
-
-      // Hitung 7 Hari Terakhir
-      const sevenDaysAgo = new Date();
-      sevenDaysAgo.setDate(now.getDate() - 7);
-
-      Object.keys(dbMonthlyData).forEach(key => {
-        const [y, m] = key.split('-');
-        const txList = dbMonthlyData[key] || [];
-        const monthIndex = parseInt(m) - 1;
-
-        txList.forEach(tx => {
-          const amt = tx.amount || 0;
-          allTimeTotal += amt;
-          allTimeCount++;
-
-          // Cek Mingguan (7 Hari Terakhir)
-          if (tx.tanggal && tx.tanggal.includes('/')) {
-            const [d, mTx, yTx] = tx.tanggal.split('/');
-            const txDate = new Date(`${yTx}-${mTx}-${d}`);
-            if (txDate >= sevenDaysAgo && txDate <= now) {
-              thisWeekTotal += amt;
-            }
-          }
-        });
-
-        const sum = txList.reduce((acc, t) => acc + (t.amount || 0), 0);
-
-        if (key === currMonthKey) thisMonthTotal = sum;
-        if (key === prevMonthKey) lastMonthTotal = sum;
-
-        if (y === selectedYear && monthIndex >= 0 && monthIndex < 12) {
-          thisYearTotal += sum;
-          monthlyChartDataCurr[monthIndex] = sum;
-        }
-
-        if (y === prevYearStr && monthIndex >= 0 && monthIndex < 12) {
-          lastYearTotal += sum;
-          monthlyChartDataPrev[monthIndex] = sum;
-        }
-      });
-
-      // Update UI Cards
-      document.getElementById('dashAllTime').textContent = formatCurrency(allTimeTotal, hideDecimals);
-      document.getElementById('dashAllTimeCount').textContent = `${allTimeCount} Order Terakumulasi`;
-
-      document.getElementById('dashThisYear').textContent = formatCurrency(thisYearTotal, hideDecimals);
-      const yearDiff = thisYearTotal - lastYearTotal;
-      document.getElementById('dashCompareYear').textContent = `vs ${prevYearStr}: ${yearDiff >= 0 ? '+' : ''}${formatCurrency(yearDiff, hideDecimals)}`;
-
-      document.getElementById('dashThisMonth').textContent = formatCurrency(thisMonthTotal, hideDecimals);
-      const monthDiff = thisMonthTotal - lastMonthTotal;
-      document.getElementById('dashCompareMonth').textContent = `vs Bulan Lalu: ${monthDiff >= 0 ? '+' : ''}${formatCurrency(monthDiff, hideDecimals)}`;
-
-      document.getElementById('dashThisWeek').textContent = formatCurrency(thisWeekTotal, hideDecimals);
-
-      renderChart(selectedYear, prevYearStr, monthlyChartDataCurr, monthlyChartDataPrev);
+    // tren
+    const mode = R.days <= 62 ? 'day' : R.days <= 400 ? 'week' : 'month';
+    $('anaGroupLabel').textContent = mode === 'day' ? '(harian)' : mode === 'week' ? '(mingguan)' : '(bulanan)';
+    const keys = [], labels = [], map = {};
+    if (mode === 'month') {
+      let c = new Date(R.s.getFullYear(), R.s.getMonth(), 1);
+      while (c <= R.e) { const k = ymKey(c); keys.push(k); labels.push(MONTHS[c.getMonth()] + ' ' + String(c.getFullYear()).slice(2)); map[k] = 0; c = new Date(c.getFullYear(), c.getMonth() + 1, 1); }
+      list.forEach(x => { map[ymKey(x.date)] += x.amount; });
+    } else {
+      const step = mode === 'day' ? 1 : 7;
+      let c = mode === 'day' ? R.s : mondayOf(R.s);
+      while (c <= R.e) { const k = c.getTime(); keys.push(k); labels.push(`${pad(c.getDate())}/${pad(c.getMonth() + 1)}`); map[k] = 0; c = addDays(c, step); }
+      list.forEach(x => { const k = mode === 'day' ? x.ts : mondayOf(x.date).getTime(); if (k in map) map[k] += x.amount; });
     }
+    const data = keys.map(k => map[k]);
+    const avgLine = data.length ? data.reduce((a, b) => a + b, 0) / data.length : 0;
+    const o = baseOpts(); o.scales.x.ticks = { maxTicksLimit: 14, autoSkip: true };
+    mkChart('chDaily', { type: 'line', data: { labels, datasets: [
+      { label: 'Pendapatan', data, borderColor: C.blue, backgroundColor: C.blue + '22', fill: true, tension: .3, borderWidth: 2.5, pointRadius: data.length > 40 ? 0 : 2 },
+      { label: 'Rata-rata', data: data.map(() => avgLine), borderColor: C.rose, borderDash: [6, 5], borderWidth: 1.5, pointRadius: 0 }] }, options: o });
 
-    function renderChart(selectedYear, prevYearStr, dataCurr, dataPrev) {
-      const ctx = document.getElementById('jokiIncomeChart').getContext('2d');
-      const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+    // weekday
+    const wd = Array(7).fill(0), wn = Array(7).fill(0);
+    list.forEach(x => { const i = (x.date.getDay() + 6) % 7; wd[i] += x.amount; wn[i]++; });
+    const wmax = Math.max(...wd);
+    const ow = baseOpts(); ow.plugins.legend.display = false;
+    ow.plugins.tooltip.callbacks.label = c => `${fmtRp(c.parsed.y)} · ${wn[c.dataIndex]} order`;
+    mkChart('chWeekday', { type: 'bar', data: { labels: DAYS, datasets: [{ label: 'Pendapatan', data: wd, backgroundColor: wd.map(v => v === wmax && v > 0 ? C.green : C.blue + '99'), borderRadius: 5 }] }, options: ow });
 
-      if (incomeChartInstance) incomeChartInstance.destroy();
+    // day of month
+    const dm = Array(31).fill(0), dn = Array(31).fill(0);
+    list.forEach(x => { dm[x.date.getDate() - 1] += x.amount; dn[x.date.getDate() - 1]++; });
+    const dmax = Math.max(...dm);
+    const od = baseOpts(); od.plugins.legend.display = false;
+    od.plugins.tooltip.callbacks.label = c => `${fmtRp(c.parsed.y)} · ${dn[c.dataIndex]} order`;
+    mkChart('chDom', { type: 'bar', data: { labels: dm.map((_, i) => i + 1), datasets: [{ label: 'Pendapatan', data: dm, backgroundColor: dm.map(v => v === dmax && v > 0 ? C.purple : C.purple + '88'), borderRadius: 3 }] }, options: od });
 
-      incomeChartInstance = new Chart(ctx, {
-        type: 'line',
-        data: {
-          labels: monthNames,
-          datasets: [
-            {
-              label: `Tahun ${selectedYear}`,
-              data: dataCurr,
-              borderColor: '#3b82f6',
-              backgroundColor: 'rgba(59, 130, 246, 0.12)',
-              fill: true,
-              tension: 0.35,
-              borderWidth: 3
-            },
-            {
-              label: `Tahun ${prevYearStr}`,
-              data: dataPrev,
-              borderColor: '#64748b',
-              borderDash: [4, 4],
-              fill: false,
-              tension: 0.35,
-              borderWidth: 2
-            }
-          ]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: {
-            legend: { labels: { color: '#94a3b8', font: { size: 11 } } },
-            tooltip: {
-              callbacks: {
-                label: (context) => `${context.dataset.label}: ${formatCurrency(context.raw, true)}`
-              }
-            }
-          },
-          scales: {
-            x: { grid: { color: 'rgba(51, 65, 85, 0.3)' }, ticks: { color: '#94a3b8', font: { size: 10 } } },
-            y: { grid: { color: 'rgba(51, 65, 85, 0.3)' }, ticks: { color: '#94a3b8', font: { size: 10 } } }
-          }
-        }
-      });
+    // distribusi nominal
+    const edges = [0, 100000, 250000, 500000, 1000000, Infinity];
+    const names = ['< 100 rb', '100 - 250 rb', '250 - 500 rb', '500 rb - 1 jt', '> 1 jt'];
+    const bc = Array(5).fill(0), bs = Array(5).fill(0);
+    list.forEach(x => { for (let i = 0; i < 5; i++) if (x.amount >= edges[i] && x.amount < edges[i + 1]) { bc[i]++; bs[i] += x.amount; break; } });
+    const ot = baseOpts(); ot.plugins.legend.display = false;
+    ot.plugins.tooltip.callbacks.label = c => `${c.parsed.y} order · ${fmtRp(bs[c.dataIndex])}`;
+    ot.scales.y.ticks = { precision: 0 };
+    mkChart('chDist', { type: 'bar', data: { labels: names, datasets: [{ label: 'Order', data: bc, backgroundColor: C.amber + 'cc', borderRadius: 5 }] }, options: ot });
+  }
+
+  /* ---------- Heatmap ---------- */
+  function renderHeatmap() {
+    const t = today(), start = addDays(mondayOf(t), -25 * 7);
+    let max = 0;
+    for (let i = 0; i < 26 * 7; i++) { const v = (dayMap[addDays(start, i).getTime()] || {}).sum || 0; if (v > max) max = v; }
+    let cells = '';
+    for (let w = 0; w < 26; w++) for (let dd = 0; dd < 7; dd++) {
+      const date = addDays(start, w * 7 + dd);
+      if (date > t) { cells += '<div class="heat-cell" style="visibility:hidden"></div>'; continue; }
+      const e = dayMap[date.getTime()];
+      const v = e ? e.sum : 0;
+      const bg = v ? `rgba(16,185,129,${(0.25 + 0.75 * v / max).toFixed(2)})` : 'var(--heat0)';
+      cells += `<div class="heat-cell" style="background:${bg}" title="${fmtDate(date)}: ${v ? fmtRp(v) + ' · ' + e.count + ' order' : 'tidak ada order'}"></div>`;
     }
+    const labels = DAYS.map((n, i) => `<div class="heat-label">${i % 2 === 0 ? n : ''}</div>`).join('');
+    $('heatmap').innerHTML = `<div class="flex flex-col gap-[3px] pt-0">${labels}</div><div class="heat-grid">${cells}</div>`;
+  }
 
-    function renderSelectedMonthTable() {
-      const tbody = document.getElementById('dashMonthlyTableBody');
-      const searchQuery = document.getElementById('dashSearchInput').value.toLowerCase();
+  /* ---------- Target ---------- */
+  function renderTarget() {
+    const target = +ls('joki_target') || 0;
+    $('targetInput').value = target || '';
+    const box = $('targetBox');
+    if (!target) { box.innerHTML = '<p class="text-xs muted">Isi target bulanan untuk melihat progres dan kebutuhan harian.</p>'; return; }
+    const { mtd, d, dim, projMonth } = K;
+    const pct = mtd.sum / target * 100, left = Math.max(0, target - mtd.sum), daysLeft = dim - d;
+    const color = pct >= 100 ? C.green : pct >= (d / dim * 100) ? C.blue : C.amber;
+    box.innerHTML = `
+      <div class="flex justify-between text-xs"><span class="font-semibold">${fmtRp(mtd.sum)} <span class="muted font-normal">dari ${fmtRp(target)}</span></span><span class="font-bold">${pct.toFixed(1).replace('.', ',')}%</span></div>
+      <div class="progress"><div style="width:${Math.min(100, pct)}%;background:${color}"></div></div>
+      <div class="grid grid-cols-2 gap-3 text-[11px] pt-1">
+        <div class="card-2 p-2.5"><div class="muted">Sisa target</div><div class="font-bold text-sm">${fmtRp(left)}</div></div>
+        <div class="card-2 p-2.5"><div class="muted">Perlu per hari (${daysLeft} hari lagi)</div><div class="font-bold text-sm">${daysLeft > 0 ? fmtRp(left / daysLeft) : '-'}</div></div>
+      </div>
+      <p class="text-[11px] ${projMonth >= target ? 'delta-up' : 'delta-down'} font-semibold">${projMonth >= target ? 'Di jalur tercapai' : 'Di bawah jalur'}: proyeksi akhir bulan ${fmtRp(projMonth)}</p>`;
+  }
+  function saveTarget() { const v = Math.max(0, +$('targetInput').value || 0); lsSet('joki_target', String(v)); renderTarget(); toast(v ? 'Target disimpan' : 'Target dihapus', 'success'); }
 
-      if (!activeMonthTab || !dbMonthlyData[activeMonthTab]) {
-        tbody.innerHTML = `<tr><td colspan="4" class="p-8 text-center text-slate-500">Tidak ada data untuk bulan ini.</td></tr>`;
-        document.getElementById('monthSummaryTitle').textContent = `Ringkasan Bulan`;
-        document.getElementById('monthSummaryCount').textContent = `0 Order`;
-        document.getElementById('monthSummaryAmount').textContent = `Total: Rp 0`;
-        return;
-      }
+  /* ---------- Ranking ---------- */
+  function renderRanking() {
+    const keys = Object.keys(monthSum);
+    const curKey = ymKey(today());
+    const best = keys.slice().sort((a, b) => monthSum[b] - monthSum[a]).slice(0, 5);
+    const worst = keys.filter(k => k !== curKey).sort((a, b) => monthSum[a] - monthSum[b]).slice(0, 3);
+    const max = best.length ? monthSum[best[0]] : 1;
+    const row = (k, color) => { const [yy, mm] = k.split('-'); return `<div><div class="flex justify-between text-xs mb-1"><span class="font-medium">${MONTHS[+mm - 1]} ${yy}</span><span class="font-semibold">${fmtRp(monthSum[k])}</span></div><div class="progress"><div style="width:${monthSum[k] / max * 100}%;background:${color}"></div></div></div>`; };
+    $('rankBest').innerHTML = best.map(k => row(k, C.green)).join('') || '<p class="text-xs muted">-</p>';
+    $('rankWorst').innerHTML = worst.map(k => row(k, C.rose)).join('') || '<p class="text-xs muted">Belum ada bulan yang selesai.</p>';
+  }
 
-      const rawList = dbMonthlyData[activeMonthTab] || [];
-      const filtered = rawList.filter(tx => {
-        return tx.keterangan.toLowerCase().includes(searchQuery) ||
-               tx.tagNama.toLowerCase().includes(searchQuery) ||
-               tx.tanggal.includes(searchQuery);
-      });
+  /* =====================================================================
+     TABEL TRANSAKSI
+  ===================================================================== */
+  function populateMonthTabs() {
+    const keys = Object.keys(monthSum).sort().reverse();
+    if (tbl.month !== 'ALL' && !(tbl.month in monthSum)) tbl.month = keys[0] || 'ALL';
+    const btn = (k, label) => `<button data-m="${k}" class="btn ${k === tbl.month ? 'btn-primary' : 'btn-ghost'}">${label}</button>`;
+    $('monthTabs').innerHTML = btn('ALL', 'Semua') + keys.map(k => { const [yy, mm] = k.split('-'); return btn(k, `${MONTHS[+mm - 1]} ${yy}`); }).join('');
+  }
+  $('monthTabs').addEventListener('click', e => { const b = e.target.closest('button[data-m]'); if (!b) return; tbl.month = b.dataset.m; tbl.page = 1; populateMonthTabs(); renderTable(); });
+  document.querySelectorAll('th.sortable').forEach(th => th.addEventListener('click', () => {
+    const k = th.dataset.sort; if (tbl.sortKey === k) tbl.sortDir *= -1; else { tbl.sortKey = k; tbl.sortDir = k === 'amount' || k === 'ts' ? -1 : 1; }
+    tbl.page = 1; renderTable();
+  }));
 
-      const monthTotal = rawList.reduce((acc, t) => acc + (t.amount || 0), 0);
-      document.getElementById('monthSummaryTitle').textContent = `Ringkasan Bulan (${activeMonthTab})`;
-      document.getElementById('monthSummaryCount').textContent = `${rawList.length} Order`;
-      document.getElementById('monthSummaryAmount').textContent = `Total: ${formatCurrency(monthTotal, true)}`;
+  function getTableRows() {
+    const q = ($('tblSearch').value || '').toLowerCase().trim();
+    let rows = tbl.month === 'ALL' ? allTx : allTx.filter(x => ymKey(x.date) === tbl.month);
+    if (q) rows = rows.filter(x => x.keterangan.toLowerCase().includes(q) || x.nama.toLowerCase().includes(q) || x.tanggal.includes(q));
+    const k = tbl.sortKey, dir = tbl.sortDir;
+    return rows.slice().sort((a, b) => {
+      const va = a[k], vb = b[k];
+      return (typeof va === 'string' ? va.localeCompare(vb) : va - vb) * dir;
+    });
+  }
+  function renderTable() {
+    const rows = getTableRows();
+    const total = rows.reduce((a, x) => a + x.amount, 0);
+    $('tblSummaryTitle').textContent = tbl.month === 'ALL' ? 'Semua bulan' : `Bulan ${tbl.month}`;
+    $('tblSummaryCount').textContent = `${rows.length.toLocaleString('id-ID')} order`;
+    $('tblSummaryAmount').textContent = fmtRp(total);
+    const pages = Math.max(1, Math.ceil(rows.length / tbl.size));
+    if (tbl.page > pages) tbl.page = pages;
+    const slice = rows.slice((tbl.page - 1) * tbl.size, tbl.page * tbl.size);
+    $('tblBody').innerHTML = slice.length ? slice.map(x => `<tr>
+      <td class="p-3 whitespace-nowrap muted">${x.pend ? '<span class="chip !text-amber-500 !bg-amber-500/10 !border-amber-500/30">PENDING</span>' : esc(x.tanggal)}</td>
+      <td class="p-3 font-mono text-[11px] max-w-md break-words">${esc(x.keterangan)}</td>
+      <td class="p-3 whitespace-nowrap"><span class="chip"><i class="fa-solid fa-user text-[9px]"></i>${esc(x.nama)}</span></td>
+      <td class="p-3 text-right font-semibold text-emerald-500 whitespace-nowrap">+${fmtRp(x.amount)}</td></tr>`).join('')
+      : `<tr><td colspan="4" class="p-8 text-center muted">Tidak ada transaksi yang cocok.</td></tr>`;
+    $('tblPageInfo').textContent = `Halaman ${tbl.page} dari ${pages}`;
+    $('tblPrev').disabled = tbl.page <= 1; $('tblNext').disabled = tbl.page >= pages;
+    document.querySelectorAll('th.sortable').forEach(th => {
+      const i = th.querySelector('i'); const on = th.dataset.sort === tbl.sortKey;
+      i.className = 'fa-solid ms-1 ' + (on ? (tbl.sortDir > 0 ? 'fa-sort-up' : 'fa-sort-down') : 'fa-sort opacity-50');
+    });
+  }
+  function tblGo(n) { tbl.page += n; renderTable(); }
 
-      if (filtered.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="4" class="p-8 text-center text-slate-500">Tidak ada data transaksi yang cocok.</td></tr>`;
-        return;
-      }
+  function exportCSV() {
+    const rows = getTableRows();
+    if (!rows.length) { toast('Tidak ada data untuk diekspor', 'warn'); return; }
+    const q = s => { s = String(s); if (/^[=+\-@]/.test(s)) s = "'" + s; return '"' + s.replace(/"/g, '""') + '"'; };
+    const csv = '\uFEFF' + ['Tanggal,Keterangan,Pengirim,Nominal'].concat(rows.map(r => [q(r.tanggal), q(r.keterangan), q(r.nama), r.amount].join(','))).join('\r\n');
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
+    a.download = `joki-${tbl.month === 'ALL' ? 'semua' : tbl.month}.csv`;
+    document.body.appendChild(a); a.click(); a.remove();
+    toast(`${rows.length} baris diekspor`, 'success');
+  }
 
-      tbody.innerHTML = filtered.map(tx => `
-        <tr class="hover:bg-slate-800/40 transition">
-          <td class="p-3.5 text-slate-400 whitespace-nowrap">${tx.tanggal}</td>
-          <td class="p-3.5 font-mono text-[11px] text-slate-300 max-w-xs break-words">${tx.keterangan}</td>
-          <td class="p-3.5 whitespace-nowrap">
-            <span class="bg-blue-500/10 text-blue-400 border border-blue-500/20 px-2.5 py-0.5 rounded text-[10px]">
-              ${tx.tagNama}
-            </span>
-          </td>
-          <td class="p-3.5 text-right font-semibold text-emerald-400 whitespace-nowrap">
-            +${formatCurrency(tx.amount, true)}
-          </td>
-        </tr>
-      `).join('');
+  /* =====================================================================
+     STAGING (UPLOAD CSV)
+  ===================================================================== */
+  function extractName(ket) {
+    let match = ket.match(/BI-FAST.*?DR\s+\d+\s+([A-Z\s]+)$/i);
+    if (match) return match[1].trim();
+    match = ket.match(/(?:TRSF E-BANKING|TRANSFER).*?\d+\.\d{2}\s+([A-Z\s]{3,})/i);
+    if (match) return match[1].trim();
+    match = ket.match(/QR[C\s]\s*\d+\s+[\d\.]+\s*([A-Z0-9\s]+)$/i);
+    if (match) return match[1].trim();
+    match = ket.match(/\s([A-Z\s]{4,})$/i);
+    if (match && !ket.includes('BIAYA ADM') && !ket.includes('TARIKAN ATM')) {
+      const name = match[1].trim();
+      if (name.length > 3 && !['INDONESIA', 'REGUL'].includes(name)) return name;
     }
+    return 'Lainnya';
+  }
+
+  // Hash 53-bit (cyrb53) -> ID stabil, tidak bergantung nomor baris CSV
+  function hashStr(str) {
+    let h1 = 0xdeadbeef, h2 = 0x41c6ce57;
+    for (let i = 0; i < str.length; i++) { const c = str.charCodeAt(i); h1 = Math.imul(h1 ^ c, 2654435761); h2 = Math.imul(h2 ^ c, 1597334677); }
+    h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507) ^ Math.imul(h2 ^ (h2 >>> 13), 3266489909);
+    h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507) ^ Math.imul(h1 ^ (h1 >>> 13), 3266489909);
+    return (4294967296 * (2097151 & h2) + (h1 >>> 0)).toString(36);
+  }
+
+  function handleFileUpload(event) {
+    const file = event.target.files[0]; if (!file) return;
+    readCsvFile(file); event.target.value = '';
+  }
+  function readCsvFile(file) {
+    const reader = new FileReader();
+    reader.onload = e => parseBCACSVText(e.target.result);
+    reader.onerror = () => toast('Gagal membaca file', 'error');
+    reader.readAsText(file);
+  }
+
+  function parseBCACSVText(text) {
+    staging = []; stPage = 1;
+    const seen = {}; let debit = 0;
+    text.split(/\r?\n/).forEach(line => {
+      if (!line.trim()) return;
+      const dm = line.match(/^'(\d{2}\/\d{2}\/\d{4}|PEND),/);
+      if (!dm) return;
+      const tanggal = dm[1], parts = line.substring(dm[0].length).split(',');
+      if (parts.length < 4) return;
+      const type = parts[parts.length - 2].trim().toUpperCase();
+      const saldo = parseFloat(parts[parts.length - 1]) || 0;
+      const amount = parseFloat(parts[parts.length - 3]) || 0;
+      const keterangan = parts.slice(0, parts.length - 3).join(',').replace(/^'/, '').trim();
+      if (type !== 'CR') { debit++; return; }
+      const sig = `${tanggal}|${keterangan}|${amount.toFixed(2)}`;
+      const n = seen[sig] = (seen[sig] || 0) + 1;
+      staging.push({ id: `JK${hashStr(sig)}-${n}`, tanggal, keterangan, tagNama: extractName(keterangan), type: 'CR', amount, saldo, selected: false });
+    });
+    renderStaging();
+    toast(staging.length ? `${staging.length} transaksi kredit ditemukan, ${debit} debit dilewati.` : 'Tidak ada transaksi kredit terdeteksi. Cek format file.', staging.length ? 'success' : 'warn');
+  }
+
+  function stFmt(v) { return fmtRp(v, !$('hideDecimals').checked); }
+
+  function renderStaging() {
+    const has = staging.length > 0;
+    $('stBar').classList.toggle('hidden', !has); $('stCards').classList.toggle('hidden', !has); $('stPager').classList.toggle('hidden', !has);
+    const badge = $('stBadge'); badge.textContent = staging.length; badge.classList.toggle('hidden', !has);
+    $('selectAll').checked = has && staging.every(t => t.selected);
+
+    if (!has) {
+      $('stBody').innerHTML = `<tr><td colspan="6" class="p-16 text-center muted"><i class="fa-solid fa-cloud-arrow-up text-4xl mb-3 block opacity-30"></i>Tidak ada data staging. Unggah file CSV mutasi BCA.</td></tr>`;
+      return;
+    }
+    const total = staging.reduce((a, t) => a + t.amount, 0);
+    $('stCards').innerHTML = [
+      kpi({ label: 'Total Nominal Staging', icon: 'fa-money-bill-wave', color: 'emerald', value: stFmt(total), sub: 'Siap dikirim ke Sheets' }),
+      kpi({ label: 'Total Transaksi', icon: 'fa-receipt', color: 'blue', value: staging.length + ' Order', sub: 'Transaksi kredit terdeteksi' }),
+      kpi({ label: 'Rata-rata per Order', icon: 'fa-calculator', color: 'amber', value: stFmt(total / staging.length), sub: 'Nominal per transaksi' })
+    ].join('');
+
+    const pages = Math.max(1, Math.ceil(staging.length / ST_SIZE));
+    if (stPage > pages) stPage = pages;
+    const off = (stPage - 1) * ST_SIZE;
+    $('stBody').innerHTML = staging.slice(off, off + ST_SIZE).map((tx, i) => {
+      const idx = off + i;
+      const dateD = tx.tanggal === 'PEND' ? `<span class="chip !text-amber-500 !bg-amber-500/10 !border-amber-500/30"><i class="fa-regular fa-clock"></i> PENDING</span>` : esc(tx.tanggal);
+      return `<tr class="${tx.selected ? 'row-sel' : ''}">
+        <td class="p-3 text-center"><input type="checkbox" class="row-checkbox" data-i="${idx}" ${tx.selected ? 'checked' : ''} /></td>
+        <td class="p-3 whitespace-nowrap muted">${dateD}</td>
+        <td class="p-3 max-w-xs break-words font-mono text-[11px]">${esc(tx.keterangan)}</td>
+        <td class="p-3 whitespace-nowrap"><span class="chip"><i class="fa-solid fa-user text-[9px]"></i>${esc(tx.tagNama)}</span></td>
+        <td class="p-3 text-right whitespace-nowrap text-emerald-500 font-semibold">+${stFmt(tx.amount)}</td>
+        <td class="p-3 text-center"><button class="btn btn-danger !px-2 !py-1.5" data-del="${idx}" title="Hapus baris"><i class="fa-solid fa-trash-can"></i></button></td></tr>`;
+    }).join('');
+    $('stPageInfo').textContent = `Halaman ${stPage} dari ${pages} · ${staging.length} baris`;
+    updateSelectionUI();
+  }
+
+  // Event delegation: centang baris tidak me-render ulang seluruh tabel
+  $('stBody').addEventListener('change', e => {
+    const cb = e.target.closest('input[data-i]'); if (!cb) return;
+    staging[+cb.dataset.i].selected = cb.checked;
+    cb.closest('tr').classList.toggle('row-sel', cb.checked);
+    $('selectAll').checked = staging.every(t => t.selected);
+    updateSelectionUI();
+  });
+  $('stBody').addEventListener('click', e => {
+    const b = e.target.closest('button[data-del]'); if (!b) return;
+    staging.splice(+b.dataset.del, 1); renderStaging();
+  });
+  function stGo(n) { stPage += n; if (stPage < 1) stPage = 1; renderStaging(); }
+  function toggleSelectAll(on) { staging.forEach(t => t.selected = on); renderStaging(); }
+  function updateSelectionUI() {
+    const n = staging.filter(t => t.selected).length;
+    $('btnDelSel').classList.toggle('hidden', n === 0); $('selCount').textContent = n;
+  }
+  async function deleteSelectedRows() {
+    const n = staging.filter(t => t.selected).length;
+    if (!(await confirmDialog('Hapus baris terpilih?', `${n} baris akan dihapus dari staging (data di Sheets tidak terpengaruh).`, 'Hapus'))) return;
+    staging = staging.filter(t => !t.selected); renderStaging(); toast(`${n} baris dihapus`, 'success');
+  }
+  async function autoFilterNonJoki() {
+    const n = staging.filter(t => !t.keterangan.toUpperCase().includes('JOKI')).length;
+    if (!n) { toast('Semua transaksi sudah mengandung kata JOKI.', 'info'); return; }
+    if (!(await confirmDialog('Hapus selain JOKI?', `${n} transaksi tanpa kata "JOKI" pada keterangannya akan dibuang dari staging.`, 'Hapus'))) return;
+    staging = staging.filter(t => t.keterangan.toUpperCase().includes('JOKI')); stPage = 1; renderStaging();
+    toast(`${n} transaksi bukan JOKI dihapus`, 'success');
+  }
+
+  async function sendDataToSheets() {
+    if (!staging.length) return;
+    const btn = $('btnSend'); btn.disabled = true;
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Mengirim...';
+    try {
+      const data = staging.map(({ selected, ...rest }) => rest);
+      const r = await api('save', { data });
+      toast(r.message || 'Data tersimpan', 'success');
+      staging = []; renderStaging();
+      lastFetch = 0; lsDel(CACHE_KEY);
+      switchTab('dashboard'); loadDashboard(true);
+    } catch (e) {
+      console.error(e); toast('Gagal menyimpan: ' + e.message, 'error');
+    } finally {
+      btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Kirim ke Google Sheets';
+    }
+  }
+
+  // Drag & drop
+  (function () {
+    const z = $('dropZone');
+    ['dragenter', 'dragover'].forEach(ev => z.addEventListener(ev, e => { e.preventDefault(); z.classList.add('drop-active'); }));
+    ['dragleave', 'drop'].forEach(ev => z.addEventListener(ev, e => { e.preventDefault(); z.classList.remove('drop-active'); }));
+    z.addEventListener('drop', e => { const f = e.dataTransfer.files[0]; if (f) readCsvFile(f); });
+  })();
+
+  /* =====================================================================
+     INIT
+  ===================================================================== */
+  document.addEventListener('DOMContentLoaded', () => {
+    applyThemeIcon();
+    if (!password) { openSettings(); toast('Isi password API dulu untuk memuat data.', 'info'); }
+    else loadDashboard(false);
+  });
   </script>
 </body>
 </html>
