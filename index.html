@@ -1,0 +1,1440 @@
+<!DOCTYPE html>
+<html lang="id" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dashboard Mutasi BCA & Modul Keuangan</title>
+  
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#eff6ff',
+              100: '#dbeafe',
+              500: '#3b82f6',
+              600: '#2563eb',
+              700: '#1d4ed8',
+              800: '#1e40af',
+              900: '#1e3a8a',
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- Google Fonts Inter -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+    }
+    /* Custom scrollbar for table containers */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #0f172a;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #334155;
+      border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #475569;
+    }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col antialiased">
+
+  <!-- Header -->
+  <header class="bg-slate-900 border-b border-slate-800 sticky top-0 z-30 shadow-md">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex items-center justify-between h-16">
+        
+        <!-- Logo / Title -->
+        <div class="flex items-center space-x-3">
+          <div class="w-9 h-9 bg-blue-600 rounded-xl flex items-center justify-center shadow-lg shadow-blue-500/30">
+            <i class="fa-solid fa-wallet text-white text-lg"></i>
+          </div>
+          <div>
+            <h1 class="font-bold text-base text-white leading-tight">FinDashboard BCA</h1>
+            <p class="text-[10px] text-slate-400">Staging & Panel Keuangan Tahunan</p>
+          </div>
+        </div>
+
+        <!-- Navigation Tabs -->
+        <nav class="hidden md:flex space-x-1">
+          <button onclick="switchTab('staging')" id="nav-staging"
+            class="px-3.5 py-2 rounded-lg text-xs font-semibold flex items-center space-x-2 transition bg-blue-600 text-white shadow-md shadow-blue-600/20">
+            <i class="fa-solid fa-file-csv"></i>
+            <span>1. Staging & Import</span>
+          </button>
+          <button onclick="switchTab('income')" id="nav-income"
+            class="px-3.5 py-2 rounded-lg text-xs font-semibold flex items-center space-x-2 text-slate-400 hover:text-slate-200 hover:bg-slate-800 transition">
+            <i class="fa-solid fa-chart-line text-emerald-400"></i>
+            <span>2. Pendapatan (CR)</span>
+          </button>
+          <button onclick="switchTab('expense')" id="nav-expense"
+            class="px-3.5 py-2 rounded-lg text-xs font-semibold flex items-center space-x-2 text-slate-400 hover:text-slate-200 hover:bg-slate-800 transition">
+            <i class="fa-solid fa-chart-pie text-rose-400"></i>
+            <span>3. Pengeluaran (DB)</span>
+          </button>
+        </nav>
+
+        <!-- Actions / Settings -->
+        <div class="flex items-center space-x-2 sm:space-x-3">
+          <!-- Status Indicator -->
+          <div class="hidden sm:flex items-center space-x-2 px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[11px] font-medium">
+            <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+            <span id="apiStatusText">Apps Script Ready</span>
+          </div>
+
+          <!-- Manage Categories Modal Button -->
+          <button onclick="openCategoryModal()" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 text-xs font-medium flex items-center space-x-1.5 transition">
+            <i class="fa-solid fa-tags text-amber-400"></i>
+            <span class="hidden sm:inline">Kategori</span>
+          </button>
+
+          <!-- Lock/Password Settings Button -->
+          <button onclick="promptPassword(true)" title="Ganti Password API" class="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-400 hover:text-white transition">
+            <i class="fa-solid fa-key text-xs"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- Mobile Navigation Row -->
+      <div class="flex md:hidden border-t border-slate-800 py-2 overflow-x-auto space-x-2">
+        <button onclick="switchTab('staging')" id="nav-staging-m"
+          class="px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center space-x-1.5 whitespace-nowrap bg-blue-600 text-white">
+          <i class="fa-solid fa-file-csv"></i>
+          <span>Staging</span>
+        </button>
+        <button onclick="switchTab('income')" id="nav-income-m"
+          class="px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center space-x-1.5 whitespace-nowrap text-slate-400 hover:bg-slate-800">
+          <i class="fa-solid fa-chart-line text-emerald-400"></i>
+          <span>Pendapatan</span>
+        </button>
+        <button onclick="switchTab('expense')" id="nav-expense-m"
+          class="px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center space-x-1.5 whitespace-nowrap text-slate-400 hover:bg-slate-800">
+          <i class="fa-solid fa-chart-pie text-rose-400"></i>
+          <span>Pengeluaran</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content Body -->
+  <main class="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8 space-y-6">
+
+    <!-- TAB 1: STAGING & IMPORT CSV -->
+    <section id="tab-staging" class="space-y-6">
+      
+      <!-- Top Upload Banner -->
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl relative overflow-hidden">
+        <div class="flex flex-col md:flex-row items-center justify-between gap-6">
+          <div class="space-y-1 text-center md:text-left">
+            <h2 class="text-xl font-bold text-white flex items-center justify-center md:justify-start gap-2">
+              <i class="fa-solid fa-cloud-arrow-up text-blue-500"></i>
+              Import Mutasi BCA
+            </h2>
+            <p class="text-xs text-slate-400 max-w-xl">
+              Unggah file CSV mutasi BCA. Lakukan review, atur tag nama & kategori, lalu kirimkan data yang sudah terfilter langsung ke Google Sheets.
+            </p>
+          </div>
+
+          <div class="flex flex-wrap items-center justify-center gap-3">
+            <label class="flex items-center gap-2 bg-slate-800 border border-slate-700 px-3.5 py-2 rounded-xl text-xs cursor-pointer hover:bg-slate-750 transition text-slate-300">
+              <input type="checkbox" id="hideDecimals" class="rounded border-slate-700 text-blue-600 focus:ring-0 bg-slate-900" checked onchange="renderStaging()" />
+              <span>Hilangkan Desimal (<code>.00</code>)</span>
+            </label>
+
+            <label class="bg-blue-600 hover:bg-blue-500 text-white font-semibold text-xs px-5 py-2.5 rounded-xl cursor-pointer transition flex items-center gap-2 shadow-lg shadow-blue-600/30">
+              <i class="fa-solid fa-file-arrow-up"></i>
+              <span>Pilih File CSV</span>
+              <input type="file" id="csvFileInput" accept=".csv" class="hidden" onchange="handleFileUpload(event)" />
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <!-- Summary Metrics Row (Staging) -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div class="bg-slate-900/80 border border-slate-800 rounded-xl p-4 shadow-sm">
+          <span class="text-xs text-emerald-400 font-medium flex items-center gap-1.5"><i class="fa-solid fa-arrow-down-left"></i> Total Kredit (CR)</span>
+          <div class="text-xl font-bold text-emerald-400 mt-2" id="stgTotalCR">Rp 0</div>
+          <p class="text-[10px] text-slate-400 mt-1" id="stgCountCR">0 transaksi masuk</p>
+        </div>
+
+        <div class="bg-slate-900/80 border border-slate-800 rounded-xl p-4 shadow-sm">
+          <span class="text-xs text-rose-400 font-medium flex items-center gap-1.5"><i class="fa-solid fa-arrow-up-right"></i> Total Debit (DB)</span>
+          <div class="text-xl font-bold text-rose-400 mt-2" id="stgTotalDB">Rp 0</div>
+          <p class="text-[10px] text-slate-400 mt-1" id="stgCountDB">0 transaksi keluar</p>
+        </div>
+
+        <div class="bg-slate-900/80 border border-slate-800 rounded-xl p-4 shadow-sm">
+          <span class="text-xs text-blue-400 font-medium flex items-center gap-1.5"><i class="fa-solid fa-scale-balanced"></i> Net Cashflow</span>
+          <div class="text-xl font-bold text-white mt-2" id="stgNetCashflow">Rp 0</div>
+          <p class="text-[10px] text-slate-400 mt-1">Selisih CR - DB (Tersaring)</p>
+        </div>
+
+        <div class="bg-slate-900/80 border border-slate-800 rounded-xl p-4 shadow-sm">
+          <span class="text-xs text-slate-400 font-medium flex items-center gap-1.5"><i class="fa-solid fa-receipt"></i> Total Transaksi Staging</span>
+          <div class="text-xl font-bold text-white mt-2" id="stgTotalTx">0</div>
+          <p class="text-[10px] text-slate-400 mt-1" id="stgAccountInfo">Belum ada file diunggah</p>
+        </div>
+      </div>
+
+      <!-- Filter Controls Panel -->
+      <div class="bg-slate-900/60 border border-slate-800 rounded-2xl p-4 space-y-4">
+        <div class="flex flex-col lg:flex-row gap-3 items-center justify-between">
+          
+          <!-- Search Input -->
+          <div class="relative w-full lg:w-72">
+            <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+            <input type="text" id="stgSearchInput" placeholder="Cari keterangan / nama..." oninput="renderStaging()"
+              class="w-full bg-slate-950 border border-slate-800 rounded-xl pl-9 pr-3 py-2 text-xs text-white focus:outline-none focus:border-blue-500 transition" />
+          </div>
+
+          <!-- Filter Dropdowns -->
+          <div class="grid grid-cols-2 sm:grid-cols-3 gap-2 w-full lg:w-auto">
+            <select id="stgFilterCategorySelect" onchange="renderStaging()" class="bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-blue-500">
+              <option value="ALL">-- Semua Kategori --</option>
+            </select>
+
+            <select id="stgFilterNameSelect" onchange="renderStaging()" class="bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-blue-500">
+              <option value="ALL">-- Semua Tag Nama --</option>
+            </select>
+
+            <div class="flex items-center gap-1 bg-slate-950 p-1 rounded-xl border border-slate-800 col-span-2 sm:col-span-1 justify-center">
+              <button onclick="setStgTypeFilter('ALL')" id="stgBtnFilterALL" class="px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-blue-600 text-white transition">Semua</button>
+              <button onclick="setStgTypeFilter('CR')" id="stgBtnFilterCR" class="px-2.5 py-1 rounded-lg text-[11px] font-semibold text-slate-400 hover:text-white transition">CR</button>
+              <button onclick="setStgTypeFilter('DB')" id="stgBtnFilterDB" class="px-2.5 py-1 rounded-lg text-[11px] font-semibold text-slate-400 hover:text-white transition">DB</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Excluded Names Chip Area -->
+        <div id="stgExcludedArea" class="hidden border-t border-slate-800 pt-3">
+          <div class="text-[11px] font-medium text-slate-400 mb-2 flex items-center justify-between">
+            <span><i class="fa-solid fa-user-slash me-1 text-rose-400"></i> Sembunyikan / Abaikan Nama Tertentu dari Kirim Data:</span>
+            <button onclick="clearExcludedNames()" class="text-[10px] text-blue-400 hover:underline">Reset Filter Nama</button>
+          </div>
+          <div id="stgExcludedTagsContainer" class="flex flex-wrap gap-1.5 max-h-28 overflow-y-auto"></div>
+        </div>
+      </div>
+
+      <!-- Preview Table & Action Button Bar -->
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
+        <div class="p-4 border-b border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-3">
+          <div>
+            <h3 class="text-sm font-bold text-white flex items-center gap-2">
+              <i class="fa-solid fa-list-check text-blue-400"></i> Preview Staging Mutasi
+            </h3>
+            <p class="text-[11px] text-slate-400">Pastikan kategori & tag nama sudah sesuai sebelum menekan tombol Send Data.</p>
+          </div>
+
+          <button onclick="sendStagingToApi()" id="btnSendData" disabled
+            class="w-full sm:w-auto px-6 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold text-xs transition flex items-center justify-center gap-2 shadow-lg shadow-emerald-600/20">
+            <i class="fa-solid fa-paper-plane"></i>
+            <span>Send Data ke Google Sheets</span>
+          </button>
+        </div>
+
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-xs text-slate-300">
+            <thead class="bg-slate-950/80 text-slate-400 uppercase text-[10px] tracking-wider border-b border-slate-800">
+              <tr>
+                <th class="p-3.5">Tanggal</th>
+                <th class="p-3.5">Keterangan Transaksi</th>
+                <th class="p-3.5">Tag Nama</th>
+                <th class="p-3.5">Kategori</th>
+                <th class="p-3.5 text-center">Tipe</th>
+                <th class="p-3.5 text-right">Nominal</th>
+                <th class="p-3.5 text-right">Saldo</th>
+              </tr>
+            </thead>
+            <tbody id="stgTableBody" class="divide-y divide-slate-800/60">
+              <tr>
+                <td colspan="7" class="p-12 text-center text-slate-500">
+                  <i class="fa-solid fa-file-csv text-3xl mb-3 block text-slate-600"></i>
+                  Silakan upload file CSV mutasi BCA kamu di atas.
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 2: DASHBOARD PENDAPATAN (INCOME - CR) -->
+    <section id="tab-income" class="hidden space-y-6">
+      
+      <!-- Controls Header -->
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col md:flex-row items-center justify-between gap-4">
+        <div>
+          <h2 class="text-lg font-bold text-white flex items-center gap-2">
+            <i class="fa-solid fa-chart-line text-emerald-400"></i> Analisis Pendapatan (CR)
+          </h2>
+          <p class="text-xs text-slate-400">Rekapitulasi pemasukan dari data Google Sheets</p>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-2.5 w-full md:w-auto">
+          <!-- Year Selector -->
+          <select id="incYearSelect" onchange="renderIncomeDashboard()" class="bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-blue-500">
+            <option value="ALL">Semua Tahun</option>
+          </select>
+
+          <!-- Month Selector -->
+          <select id="incMonthSelect" onchange="renderIncomeDashboard()" class="bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-blue-500">
+            <option value="ALL">Semua Bulan</option>
+            <option value="01">Januari</option>
+            <option value="02">Februari</option>
+            <option value="03">Maret</option>
+            <option value="04">April</option>
+            <option value="05">Mei</option>
+            <option value="06">Juni</option>
+            <option value="07">Juli</option>
+            <option value="08">Agustus</option>
+            <option value="09">September</option>
+            <option value="10">Oktober</option>
+            <option value="11">November</option>
+            <option value="12">Desember</option>
+          </select>
+
+          <!-- Refresh Data Button -->
+          <button onclick="fetchDatabaseFromApi()" class="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-semibold text-xs flex items-center gap-2 transition shadow-md shadow-blue-600/20">
+            <i class="fa-solid fa-rotate-right" id="incRefreshIcon"></i>
+            <span>Sync Data</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Metric Cards -->
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-sm">
+          <div class="flex items-center justify-between text-slate-400 text-xs font-medium">
+            <span>Pendapatan Bulan Ini</span>
+            <i class="fa-regular fa-calendar-check text-emerald-400"></i>
+          </div>
+          <div class="text-2xl font-bold text-emerald-400 mt-2" id="incMetricMonth">Rp 0</div>
+          <div class="text-[11px] mt-2 flex items-center gap-1.5" id="incMetricMonthGrowth">
+            <span class="text-slate-500">vs Bulan Lalu: -</span>
+          </div>
+        </div>
+
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-sm">
+          <div class="flex items-center justify-between text-slate-400 text-xs font-medium">
+            <span>Pendapatan Tahun Ini</span>
+            <i class="fa-solid fa-trophy text-amber-400"></i>
+          </div>
+          <div class="text-2xl font-bold text-white mt-2" id="incMetricYear">Rp 0</div>
+          <div class="text-[11px] mt-2 text-slate-400" id="incMetricYearSub">
+            Filter terpilih
+          </div>
+        </div>
+
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-sm">
+          <div class="flex items-center justify-between text-slate-400 text-xs font-medium">
+            <span>Rata-Rata Pendapatan Bulanan</span>
+            <i class="fa-solid fa-calculator text-blue-400"></i>
+          </div>
+          <div class="text-2xl font-bold text-blue-400 mt-2" id="incMetricAvg">Rp 0</div>
+          <div class="text-[11px] text-slate-400 mt-2">Berdasarkan data aktif</div>
+        </div>
+      </div>
+
+      <!-- Charts Row -->
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Line Chart (Trend Bulanan) -->
+        <div class="lg:col-span-2 bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-sm space-y-4">
+          <div class="flex items-center justify-between">
+            <h3 class="text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center gap-2">
+              <i class="fa-solid fa-chart-area text-emerald-400"></i> Tren Pendapatan Bulanan (Jan - Des)
+            </h3>
+          </div>
+          <div class="relative h-64 w-full">
+            <canvas id="incLineChart"></canvas>
+          </div>
+        </div>
+
+        <!-- Donut Chart (Kategori Breakdown) -->
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-sm space-y-4">
+          <h3 class="text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center gap-2">
+            <i class="fa-solid fa-chart-pie text-amber-400"></i> Porsi Kategori Pendapatan
+          </h3>
+          <div class="relative h-64 w-full flex items-center justify-center">
+            <canvas id="incDonutChart"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- Income Table -->
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-xl space-y-3">
+        <div class="p-4 border-b border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-3">
+          <h3 class="text-xs font-bold text-slate-300 uppercase tracking-wider">Daftar Transaksi Pendapatan</h3>
+          <input type="text" id="incTableSearch" oninput="renderIncomeDashboard()" placeholder="Cari di tabel..."
+            class="bg-slate-950 border border-slate-800 rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none focus:border-blue-500 w-full sm:w-64" />
+        </div>
+
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-xs text-slate-300">
+            <thead class="bg-slate-950/80 text-slate-400 uppercase text-[10px] tracking-wider border-b border-slate-800">
+              <tr>
+                <th class="p-3.5">Tanggal</th>
+                <th class="p-3.5">Keterangan</th>
+                <th class="p-3.5">Nama</th>
+                <th class="p-3.5">Kategori</th>
+                <th class="p-3.5 text-right">Nominal</th>
+              </tr>
+            </thead>
+            <tbody id="incTableBody" class="divide-y divide-slate-800/60">
+              <tr><td colspan="5" class="p-8 text-center text-slate-500">Klik "Sync Data" untuk mengambil database.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 3: DASHBOARD PENGELUARAN (EXPENSE - DB) -->
+    <section id="tab-expense" class="hidden space-y-6">
+      
+      <!-- Controls Header -->
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col md:flex-row items-center justify-between gap-4">
+        <div>
+          <h2 class="text-lg font-bold text-white flex items-center gap-2">
+            <i class="fa-solid fa-chart-pie text-rose-400"></i> Analisis Pengeluaran (DB)
+          </h2>
+          <p class="text-xs text-slate-400">Rekapitulasi pos pengeluaran dari data Google Sheets</p>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-2.5 w-full md:w-auto">
+          <select id="expYearSelect" onchange="renderExpenseDashboard()" class="bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-blue-500">
+            <option value="ALL">Semua Tahun</option>
+          </select>
+
+          <select id="expMonthSelect" onchange="renderExpenseDashboard()" class="bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-blue-500">
+            <option value="ALL">Semua Bulan</option>
+            <option value="01">Januari</option>
+            <option value="02">Februari</option>
+            <option value="03">Maret</option>
+            <option value="04">April</option>
+            <option value="05">Mei</option>
+            <option value="06">Juni</option>
+            <option value="07">Juli</option>
+            <option value="08">Agustus</option>
+            <option value="09">September</option>
+            <option value="10">Oktober</option>
+            <option value="11">November</option>
+            <option value="12">Desember</option>
+          </select>
+
+          <button onclick="fetchDatabaseFromApi()" class="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-semibold text-xs flex items-center gap-2 transition shadow-md shadow-blue-600/20">
+            <i class="fa-solid fa-rotate-right" id="expRefreshIcon"></i>
+            <span>Sync Data</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Metric Cards -->
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-sm">
+          <div class="flex items-center justify-between text-slate-400 text-xs font-medium">
+            <span>Pengeluaran Bulan Ini</span>
+            <i class="fa-solid fa-arrow-up-right text-rose-400"></i>
+          </div>
+          <div class="text-2xl font-bold text-rose-400 mt-2" id="expMetricMonth">Rp 0</div>
+          <div class="text-[11px] mt-2 flex items-center gap-1.5" id="expMetricMonthGrowth">
+            <span class="text-slate-500">vs Bulan Lalu: -</span>
+          </div>
+        </div>
+
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-sm">
+          <div class="flex items-center justify-between text-slate-400 text-xs font-medium">
+            <span>Pengeluaran Tahun Ini</span>
+            <i class="fa-solid fa-wallet text-amber-400"></i>
+          </div>
+          <div class="text-2xl font-bold text-white mt-2" id="expMetricYear">Rp 0</div>
+          <div class="text-[11px] text-slate-400 mt-2">Total pengeluaran tercatat</div>
+        </div>
+
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-sm">
+          <div class="flex items-center justify-between text-slate-400 text-xs font-medium">
+            <span>Pos Pengeluaran Terbesar</span>
+            <i class="fa-solid fa-fire text-amber-500"></i>
+          </div>
+          <div class="text-xl font-bold text-amber-400 mt-2 truncate" id="expMetricTopCategory">-</div>
+          <div class="text-[11px] text-slate-400 mt-2" id="expMetricTopCategoryVal">Nominal: Rp 0</div>
+        </div>
+      </div>
+
+      <!-- Charts Row -->
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div class="lg:col-span-2 bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-sm space-y-4">
+          <h3 class="text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center gap-2">
+            <i class="fa-solid fa-chart-column text-rose-400"></i> Bar Chart Pengeluaran Bulanan
+          </h3>
+          <div class="relative h-64 w-full">
+            <canvas id="expBarChart"></canvas>
+          </div>
+        </div>
+
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-sm space-y-4">
+          <h3 class="text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center gap-2">
+            <i class="fa-solid fa-chart-pie text-rose-400"></i> Alokasi Pos Pengeluaran
+          </h3>
+          <div class="relative h-64 w-full flex items-center justify-center">
+            <canvas id="expDonutChart"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- Expense Table -->
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-xl space-y-3">
+        <div class="p-4 border-b border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-3">
+          <h3 class="text-xs font-bold text-slate-300 uppercase tracking-wider">Daftar Transaksi Pengeluaran</h3>
+          <input type="text" id="expTableSearch" oninput="renderExpenseDashboard()" placeholder="Cari di tabel..."
+            class="bg-slate-950 border border-slate-800 rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none focus:border-blue-500 w-full sm:w-64" />
+        </div>
+
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-xs text-slate-300">
+            <thead class="bg-slate-950/80 text-slate-400 uppercase text-[10px] tracking-wider border-b border-slate-800">
+              <tr>
+                <th class="p-3.5">Tanggal</th>
+                <th class="p-3.5">Keterangan</th>
+                <th class="p-3.5">Nama</th>
+                <th class="p-3.5">Kategori</th>
+                <th class="p-3.5 text-right">Nominal</th>
+              </tr>
+            </thead>
+            <tbody id="expTableBody" class="divide-y divide-slate-800/60">
+              <tr><td colspan="5" class="p-8 text-center text-slate-500">Klik "Sync Data" untuk mengambil database.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- MODAL: KELOLA KATEGORI -->
+  <div id="modalCategory" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 hidden">
+    <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-5">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+        <h3 class="text-base font-bold text-white flex items-center gap-2">
+          <i class="fa-solid fa-tags text-amber-400"></i> Kelola Kategori Master
+        </h3>
+        <button onclick="closeCategoryModal()" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
+      </div>
+
+      <!-- Form Tambah Kategori -->
+      <form onsubmit="submitNewCategory(event)" class="space-y-3 bg-slate-950 p-4 rounded-xl border border-slate-800">
+        <div class="text-xs font-semibold text-slate-300">Tambah Kategori Baru</div>
+        <div class="space-y-2">
+          <input type="text" id="newCatName" required placeholder="Nama Kategori (misal: Investasi, Bonus)..."
+            class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-blue-500" />
+          
+          <select id="newCatType" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-blue-500">
+            <option value="CR">Pemasukan (CR)</option>
+            <option value="DB">Pengeluaran (DB)</option>
+            <option value="ALL">Umum / Keduanya</option>
+          </select>
+        </div>
+
+        <button type="submit" id="btnSubmitCat" class="w-full py-2 bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs rounded-xl transition shadow-md shadow-blue-600/20">
+          + Tambah ke Master Kategori
+        </button>
+      </form>
+
+      <!-- Existing List -->
+      <div class="space-y-2">
+        <div class="text-xs font-semibold text-slate-400">Daftar Kategori Saat Ini:</div>
+        <div id="categoryListContainer" class="max-h-40 overflow-y-auto space-y-1.5 pr-1">
+          <span class="text-xs text-slate-500">Memuat kategori...</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: PASSWORD PROMPT -->
+  <div id="modalPassword" class="fixed inset-0 z-50 bg-slate-950/90 backdrop-blur-md flex items-center justify-center p-4 hidden">
+    <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-sm w-full p-6 shadow-2xl space-y-4 text-center">
+      <div class="w-12 h-12 bg-blue-600/20 text-blue-400 rounded-2xl flex items-center justify-center mx-auto">
+        <i class="fa-solid fa-lock text-xl"></i>
+      </div>
+      <div>
+        <h3 class="text-base font-bold text-white">Masukkan Password API</h3>
+        <p class="text-xs text-slate-400 mt-1">Diperlukan untuk otentikasi dengan Apps Script Google Sheets.</p>
+      </div>
+
+      <form onsubmit="savePasswordFromModal(event)" class="space-y-3">
+        <input type="password" id="inputPassModal" required placeholder="Password..."
+          class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-white text-center focus:outline-none focus:border-blue-500" />
+        <button type="submit" class="w-full py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs rounded-xl transition shadow-lg shadow-blue-600/20">
+          Simpan Password
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- JAVASCRIPT LOGIC -->
+  <script>
+    // Config & Global State
+    const API_URL = "https://script.google.com/macros/s/AKfycbzzo019Sn-tFUhIFFT9Atpv-r7MMbcQEOG7kLL4dr2esQgPj3aaETQZrIaVMrNwBGE95w/exec";
+    const DEFAULT_PASS = "ikmalsayang";
+
+    let apiPassword = localStorage.getItem("bca_api_password") || DEFAULT_PASS;
+    let masterCategories = [
+      { name: 'Gaji', type: 'CR' },
+      { name: 'Joki', type: 'CR' },
+      { name: 'Project / Freelance', type: 'CR' },
+      { name: 'Belanja / QRIS', type: 'DB' },
+      { name: 'Makan / Jajan', type: 'DB' },
+      { name: 'Tarik Cash', type: 'DB' },
+      { name: 'Biaya Bank', type: 'DB' },
+      { name: 'Transfer', type: 'ALL' },
+      { name: 'Lainnya', type: 'ALL' }
+    ];
+
+    let stagingRawTx = [];
+    let stagingDetectedNames = new Set();
+    let stagingExcludedNames = new Set();
+    let stagingTypeFilter = 'ALL';
+    let stagingAccountMeta = { noRek: '', nama: '' };
+
+    let dbData = { categories: [], monthlyData: {} };
+
+    // Chart Instances
+    let incLineChartInstance = null;
+    let incDonutChartInstance = null;
+    let expBarChartInstance = null;
+    let expDonutChartInstance = null;
+
+    // Initialization on window load
+    window.onload = function() {
+      localStorage.setItem("bca_api_password", apiPassword);
+      populateCategoryDropdowns();
+      fetchDatabaseFromApi();
+    };
+
+    // ==========================================
+    // TAB NAVIGATION
+    // ==========================================
+    function switchTab(tab) {
+      ['staging', 'income', 'expense'].forEach(t => {
+        const sec = document.getElementById(`tab-${t}`);
+        const nav = document.getElementById(`nav-${t}`);
+        const navM = document.getElementById(`nav-${t}-m`);
+
+        if (t === tab) {
+          sec.classList.remove('hidden');
+          if (nav) nav.className = "px-3.5 py-2 rounded-lg text-xs font-semibold flex items-center space-x-2 transition bg-blue-600 text-white shadow-md shadow-blue-600/20";
+          if (navM) navM.className = "px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center space-x-1.5 whitespace-nowrap bg-blue-600 text-white";
+        } else {
+          sec.classList.add('hidden');
+          if (nav) nav.className = "px-3.5 py-2 rounded-lg text-xs font-semibold flex items-center space-x-2 text-slate-400 hover:text-slate-200 hover:bg-slate-800 transition";
+          if (navM) navM.className = "px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center space-x-1.5 whitespace-nowrap text-slate-400 hover:bg-slate-800";
+        }
+      });
+
+      if (tab === 'income') renderIncomeDashboard();
+      if (tab === 'expense') renderExpenseDashboard();
+    }
+
+    // ==========================================
+    // AUTH / PASSWORD PROMPT
+    // ==========================================
+    function promptPassword(force = false) {
+      if (force || !apiPassword) {
+        document.getElementById('inputPassModal').value = apiPassword;
+        document.getElementById('modalPassword').classList.remove('hidden');
+      }
+    }
+
+    function savePasswordFromModal(e) {
+      e.preventDefault();
+      const val = document.getElementById('inputPassModal').value.trim();
+      if (val) {
+        apiPassword = val;
+        localStorage.setItem("bca_api_password", apiPassword);
+        document.getElementById('modalPassword').classList.add('hidden');
+        fetchDatabaseFromApi();
+      }
+    }
+
+    // ==========================================
+    // TAB 1: STAGING & PARSER
+    // ==========================================
+    function handleFileUpload(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = function(evt) {
+        parseBCACSV(evt.target.result);
+      };
+      reader.readAsText(file);
+    }
+
+    function extractNameFromKet(ket) {
+      let match = ket.match(/BI-FAST.*?DR\s+\d+\s+([A-Z\s]+)$/i);
+      if (match) return match[1].trim();
+
+      match = ket.match(/(?:TRSF E-BANKING|TRANSFER).*?\d+\.\d{2}\s+([A-Z\s]{3,})/i);
+      if (match) return match[1].trim();
+
+      match = ket.match(/QR[C\s]\s*\d+\s+[\d\.]+\s*([A-Z0-9\s]+)$/i);
+      if (match) return match[1].trim();
+
+      match = ket.match(/\s([A-Z\s]{4,})$/i);
+      if (match && !ket.includes('BIAYA ADM') && !ket.includes('TARIKAN ATM')) {
+        const name = match[1].trim();
+        if (name.length > 3 && !['INDONESIA', 'REGUL'].includes(name)) return name;
+      }
+
+      if (ket.includes('BIAYA ADM')) return 'BCA (Biaya Adm)';
+      if (ket.includes('TARIKAN ATM')) return 'Tarikan ATM';
+
+      return 'Lainnya';
+    }
+
+    function guessCategory(ket) {
+      const k = ket.toUpperCase();
+      if (k.includes('GAJI')) return 'Gaji';
+      if (k.includes('JOKI')) return 'Joki';
+      if (k.includes('BIAYA ADM')) return 'Biaya Bank';
+      if (k.includes('TARIKAN ATM')) return 'Tarik Cash';
+      if (k.includes('QRC') || k.includes('INDOMA') || k.includes('MIDI') || k.includes('ALFAMART')) return 'Belanja / QRIS';
+      if (k.includes('TRSF') || k.includes('TRANSFER') || k.includes('BI-FAST')) return 'Transfer';
+      return 'Lainnya';
+    }
+
+    function parseBCACSV(text) {
+      stagingRawTx = [];
+      stagingDetectedNames.clear();
+      stagingExcludedNames.clear();
+      stagingAccountMeta = { noRek: '', nama: '' };
+
+      const lines = text.split(/\r?\n/);
+
+      lines.forEach((line, idx) => {
+        if (!line.trim()) return;
+
+        if (line.includes('No. Rekening')) {
+          const parts = line.split(',');
+          if (parts[2]) stagingAccountMeta.noRek = parts[2].replace(/'/g, '').trim();
+        }
+        if (line.includes('Nama')) {
+          const parts = line.split(',');
+          if (parts[2]) stagingAccountMeta.nama = parts[2].replace(/'/g, '').trim();
+        }
+
+        const dateMatch = line.match(/^'(\d{2}\/\d{2}\/\d{4}|PEND),/);
+        if (dateMatch) {
+          const tanggal = dateMatch[1];
+          const rest = line.substring(dateMatch[0].length);
+          const parts = rest.split(',');
+
+          if (parts.length >= 4) {
+            const type = parts[parts.length - 2].trim().toUpperCase();
+            const saldo = parseFloat(parts[parts.length - 1]) || 0;
+            const amount = parseFloat(parts[parts.length - 3]) || 0;
+            const keterangan = parts.slice(0, parts.length - 3).join(',').replace(/^'/, '').trim();
+            const tagNama = extractNameFromKet(keterangan);
+            const category = guessCategory(keterangan);
+            const txId = `${tanggal}_${amount}_${idx}`;
+
+            if (type === 'CR' || type === 'DB') {
+              if (tagNama) stagingDetectedNames.add(tagNama);
+              stagingRawTx.push({
+                id: txId,
+                tanggal,
+                keterangan,
+                tagNama,
+                category,
+                amount,
+                type,
+                saldo
+              });
+            }
+          }
+        }
+      });
+
+      populateStagingNameSelects();
+      renderStaging();
+      document.getElementById('btnSendData').disabled = stagingRawTx.length === 0;
+    }
+
+    function populateStagingNameSelects() {
+      const select = document.getElementById('stgFilterNameSelect');
+      select.innerHTML = '<option value="ALL">-- Semua Tag Nama --</option>';
+
+      const sorted = Array.from(stagingDetectedNames).sort();
+      sorted.forEach(name => {
+        const opt = document.createElement('option');
+        opt.value = name;
+        opt.textContent = name;
+        select.appendChild(opt);
+      });
+
+      const container = document.getElementById('stgExcludedTagsContainer');
+      const excludedArea = document.getElementById('stgExcludedArea');
+
+      if (sorted.length > 0) {
+        excludedArea.classList.remove('hidden');
+        container.innerHTML = sorted.map(name => {
+          const isEx = stagingExcludedNames.has(name);
+          return `
+            <button onclick="toggleExcludeName('${name.replace(/'/g, "\\'")}')" 
+              class="px-2.5 py-1 rounded-lg text-[11px] font-medium border transition flex items-center gap-1.5 ${
+                isEx 
+                  ? 'bg-rose-500/20 text-rose-300 border-rose-500/40 line-through opacity-60' 
+                  : 'bg-slate-950 text-slate-300 border-slate-800 hover:border-slate-700'
+              }">
+              <i class="fa-solid ${isEx ? 'fa-xmark text-rose-400' : 'fa-check text-slate-500'}"></i>
+              ${name}
+            </button>
+          `;
+        }).join('');
+      } else {
+        excludedArea.classList.add('hidden');
+      }
+    }
+
+    function toggleExcludeName(name) {
+      if (stagingExcludedNames.has(name)) stagingExcludedNames.delete(name);
+      else stagingExcludedNames.add(name);
+      populateStagingNameSelects();
+      renderStaging();
+    }
+
+    function clearExcludedNames() {
+      stagingExcludedNames.clear();
+      populateStagingNameSelects();
+      renderStaging();
+    }
+
+    function setStgTypeFilter(type) {
+      stagingTypeFilter = type;
+      ['ALL', 'CR', 'DB'].forEach(f => {
+        const btn = document.getElementById(`stgBtnFilter${f}`);
+        if (f === type) {
+          btn.className = 'px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-blue-600 text-white transition';
+        } else {
+          btn.className = 'px-2.5 py-1 rounded-lg text-[11px] font-semibold text-slate-400 hover:text-white transition';
+        }
+      });
+      renderStaging();
+    }
+
+    function formatRp(val, hideDecimals) {
+      return new Intl.NumberFormat('id-ID', {
+        style: 'currency',
+        currency: 'IDR',
+        minimumFractionDigits: hideDecimals ? 0 : 2,
+        maximumFractionDigits: hideDecimals ? 0 : 2
+      }).format(val);
+    }
+
+    function renderStaging() {
+      const hideDecimals = document.getElementById('hideDecimals').checked;
+      const searchQuery = document.getElementById('stgSearchInput').value.toLowerCase();
+      const selectedCat = document.getElementById('stgFilterCategorySelect').value;
+      const selectedName = document.getElementById('stgFilterNameSelect').value;
+
+      if (stagingAccountMeta.noRek) {
+        document.getElementById('stgAccountInfo').textContent = `Rekening: ${stagingAccountMeta.noRek} a.n ${stagingAccountMeta.nama}`;
+      }
+
+      const filtered = stagingRawTx.filter(tx => {
+        if (stagingExcludedNames.has(tx.tagNama)) return false;
+
+        const matchesType = stagingTypeFilter === 'ALL' || tx.type === stagingTypeFilter;
+        const matchesSearch = tx.keterangan.toLowerCase().includes(searchQuery) || tx.tanggal.includes(searchQuery);
+        const matchesCat = selectedCat === 'ALL' || tx.category === selectedCat;
+        const matchesName = selectedName === 'ALL' || tx.tagNama === selectedName;
+
+        return matchesType && matchesSearch && matchesCat && matchesName;
+      });
+
+      let sumCR = 0, countCR = 0;
+      let sumDB = 0, countDB = 0;
+
+      filtered.forEach(tx => {
+        if (tx.type === 'CR') { sumCR += tx.amount; countCR++; }
+        if (tx.type === 'DB') { sumDB += tx.amount; countDB++; }
+      });
+
+      document.getElementById('stgTotalCR').textContent = formatRp(sumCR, hideDecimals);
+      document.getElementById('stgCountCR').textContent = `${countCR} transaksi masuk`;
+
+      document.getElementById('stgTotalDB').textContent = formatRp(sumDB, hideDecimals);
+      document.getElementById('stgCountDB').textContent = `${countDB} transaksi keluar`;
+
+      const net = sumCR - sumDB;
+      const netElem = document.getElementById('stgNetCashflow');
+      netElem.textContent = (net >= 0 ? '+' : '') + formatRp(net, hideDecimals);
+      netElem.className = `text-xl font-bold mt-2 ${net >= 0 ? 'text-emerald-400' : 'text-rose-400'}`;
+
+      document.getElementById('stgTotalTx').textContent = filtered.length;
+
+      const tbody = document.getElementById('stgTableBody');
+      if (filtered.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="7" class="p-8 text-center text-slate-500">Tidak ada transaksi staging yang sesuai.</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = filtered.map(tx => {
+        const isCR = tx.type === 'CR';
+        const isPEND = tx.tanggal === 'PEND';
+        const badgeClass = isCR 
+          ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' 
+          : 'bg-rose-500/10 text-rose-400 border-rose-500/20';
+        const amountClass = isCR ? 'text-emerald-400 font-semibold' : 'text-slate-200';
+
+        const dateDisplay = isPEND 
+          ? `<span class="bg-amber-500/20 text-amber-300 border border-amber-500/30 px-2 py-0.5 rounded text-[10px] font-bold"><i class="fa-regular fa-clock me-1"></i>PENDING</span>` 
+          : tx.tanggal;
+
+        return `
+          <tr class="hover:bg-slate-800/40 transition">
+            <td class="p-3.5 whitespace-nowrap text-slate-400">${dateDisplay}</td>
+            <td class="p-3.5 max-w-xs break-words font-mono text-[11px] text-slate-300">${tx.keterangan}</td>
+            <td class="p-3.5 whitespace-nowrap">
+              <span class="bg-blue-500/10 text-blue-400 border border-blue-500/20 px-2 py-0.5 rounded-lg text-[10px] font-medium">
+                <i class="fa-solid fa-user text-[9px] me-1"></i>${tx.tagNama}
+              </span>
+            </td>
+            <td class="p-3.5 whitespace-nowrap">
+              <select onchange="updateTxCategory('${tx.id}', this.value)" 
+                class="bg-slate-950 border border-slate-800 text-yellow-400 font-medium rounded-lg px-2 py-1 text-[11px] focus:outline-none focus:border-yellow-500">
+                ${masterCategories.map(c => `<option value="${c.name}" ${tx.category === c.name ? 'selected' : ''}>${c.name}</option>`).join('')}
+              </select>
+            </td>
+            <td class="p-3.5 text-center whitespace-nowrap">
+              <span class="px-2 py-0.5 rounded text-[10px] font-bold border ${badgeClass}">${tx.type}</span>
+            </td>
+            <td class="p-3.5 text-right whitespace-nowrap ${amountClass}">
+              ${isCR ? '+' : '-'}${formatRp(tx.amount, hideDecimals)}
+            </td>
+            <td class="p-3.5 text-right whitespace-nowrap text-slate-400">
+              ${formatRp(tx.saldo, hideDecimals)}
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    function updateTxCategory(txId, newCat) {
+      const tx = stagingRawTx.find(t => t.id === txId);
+      if (tx) tx.category = newCat;
+    }
+
+    function sendStagingToApi() {
+      const activeTransactions = stagingRawTx.filter(tx => !stagingExcludedNames.has(tx.tagNama));
+      if (activeTransactions.length === 0) {
+        alert("Tidak ada data transaksi aktif untuk dikirim.");
+        return;
+      }
+
+      const btn = document.getElementById('btnSendData');
+      btn.disabled = true;
+      btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i><span>Sending Data...</span>`;
+
+      fetch(API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain' },
+        body: JSON.stringify({
+          password: apiPassword,
+          data: activeTransactions
+        })
+      })
+      .then(res => res.json())
+      .then(res => {
+        btn.disabled = false;
+        btn.innerHTML = `<i class="fa-solid fa-paper-plane"></i><span>Send Data ke Google Sheets</span>`;
+
+        if (res.status === 'success') {
+          alert('Berhasil! Data mutasi berhasil disimpan ke Google Sheets.');
+          fetchDatabaseFromApi();
+        } else {
+          alert('Gagal mengirim data: ' + res.message);
+          if (res.message.includes('Password')) promptPassword(true);
+        }
+      })
+      .catch(err => {
+        btn.disabled = false;
+        btn.innerHTML = `<i class="fa-solid fa-paper-plane"></i><span>Send Data ke Google Sheets</span>`;
+        alert('Error: ' + err.toString());
+      });
+    }
+
+    // ==========================================
+    // API SYNC & MASTER CATEGORY
+    // ==========================================
+    function fetchDatabaseFromApi() {
+      document.getElementById('apiStatusText').textContent = "Syncing...";
+
+      fetch(`${API_URL}?password=${encodeURIComponent(apiPassword)}`)
+        .then(res => res.json())
+        .then(res => {
+          if (res.status === 'success') {
+            document.getElementById('apiStatusText').textContent = "Apps Script Ready";
+            dbData = res.data;
+
+            if (dbData.categories && dbData.categories.length > 0) {
+              masterCategories = dbData.categories;
+            }
+
+            populateCategoryDropdowns();
+            populateYearOptions();
+
+            renderIncomeDashboard();
+            renderExpenseDashboard();
+          } else {
+            document.getElementById('apiStatusText').textContent = "Auth Error";
+            if (res.message.includes('Password')) promptPassword(true);
+          }
+        })
+        .catch(err => {
+          document.getElementById('apiStatusText').textContent = "Connection Failed";
+          console.error(err);
+        });
+    }
+
+    function populateCategoryDropdowns() {
+      const stgSelect = document.getElementById('stgFilterCategorySelect');
+      stgSelect.innerHTML = '<option value="ALL">-- Semua Kategori --</option>';
+
+      masterCategories.forEach(c => {
+        const opt = document.createElement('option');
+        opt.value = c.name;
+        opt.textContent = c.name;
+        stgSelect.appendChild(opt);
+      });
+
+      const catContainer = document.getElementById('categoryListContainer');
+      catContainer.innerHTML = masterCategories.map(c => `
+        <div class="flex items-center justify-between bg-slate-950 px-3 py-1.5 rounded-lg border border-slate-800 text-xs">
+          <span class="text-slate-200 font-medium">${c.name}</span>
+          <span class="text-[10px] px-2 py-0.5 rounded font-bold ${c.type === 'CR' ? 'bg-emerald-500/20 text-emerald-400' : c.type === 'DB' ? 'bg-rose-500/20 text-rose-400' : 'bg-slate-800 text-slate-400'}">${c.type}</span>
+        </div>
+      `).join('');
+    }
+
+    function populateYearOptions() {
+      const years = new Set();
+      Object.keys(dbData.monthlyData || {}).forEach(key => {
+        const y = key.split('-')[0];
+        if (y) years.add(y);
+      });
+
+      const incYearSelect = document.getElementById('incYearSelect');
+      const expYearSelect = document.getElementById('expYearSelect');
+
+      const sortedYears = Array.from(years).sort().reverse();
+      
+      [incYearSelect, expYearSelect].forEach(select => {
+        const currentVal = select.value;
+        select.innerHTML = '<option value="ALL">Semua Tahun</option>';
+        sortedYears.forEach(y => {
+          const opt = document.createElement('option');
+          opt.value = y;
+          opt.textContent = y;
+          select.appendChild(opt);
+        });
+        select.value = currentVal;
+      });
+    }
+
+    function openCategoryModal() {
+      document.getElementById('modalCategory').classList.remove('hidden');
+    }
+    function closeCategoryModal() {
+      document.getElementById('modalCategory').classList.add('hidden');
+    }
+
+    function submitNewCategory(e) {
+      e.preventDefault();
+      const name = document.getElementById('newCatName').value.trim();
+      const type = document.getElementById('newCatType').value;
+
+      if (!name) return;
+
+      const btn = document.getElementById('btnSubmitCat');
+      btn.disabled = true;
+
+      fetch(API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain' },
+        body: JSON.stringify({
+          password: apiPassword,
+          action: 'add_category',
+          categoryName: name,
+          categoryType: type
+        })
+      })
+      .then(res => res.json())
+      .then(res => {
+        btn.disabled = false;
+        if (res.status === 'success') {
+          masterCategories.push({ name, type });
+          populateCategoryDropdowns();
+          document.getElementById('newCatName').value = '';
+          alert('Kategori baru berhasil ditambahkan!');
+        } else {
+          alert('Gagal: ' + res.message);
+        }
+      })
+      .catch(err => {
+        btn.disabled = false;
+        alert('Error: ' + err.toString());
+      });
+    }
+
+    // ==========================================
+    // TAB 2: DASHBOARD PENDAPATAN (INCOME - CR)
+    // ==========================================
+    function renderIncomeDashboard() {
+      const selectedYear = document.getElementById('incYearSelect').value;
+      const selectedMonth = document.getElementById('incMonthSelect').value;
+      const searchQuery = document.getElementById('incTableSearch').value.toLowerCase();
+
+      let allIncomeTx = [];
+      const monthlyTotals = {}; // key: 'YYYY-MM', val: sum
+      const categoryTotals = {}; // key: category, val: sum
+
+      Object.keys(dbData.monthlyData || {}).forEach(sheetKey => {
+        const [y, m] = sheetKey.split('-');
+
+        if (selectedYear !== 'ALL' && y !== selectedYear) return;
+        if (selectedMonth !== 'ALL' && m !== selectedMonth) return;
+
+        const txList = dbData.monthlyData[sheetKey] || [];
+        txList.forEach(tx => {
+          if (tx.type === 'CR') {
+            allIncomeTx.push(tx);
+
+            if (!monthlyTotals[sheetKey]) monthlyTotals[sheetKey] = 0;
+            monthlyTotals[sheetKey] += tx.amount;
+
+            if (!categoryTotals[tx.category]) categoryTotals[tx.category] = 0;
+            categoryTotals[tx.category] += tx.amount;
+          }
+        });
+      });
+
+      // Filtered Table Transaksi
+      const filteredTable = allIncomeTx.filter(tx => 
+        tx.keterangan.toLowerCase().includes(searchQuery) ||
+        tx.tagNama.toLowerCase().includes(searchQuery) ||
+        tx.category.toLowerCase().includes(searchQuery)
+      );
+
+      // Render Table
+      const tbody = document.getElementById('incTableBody');
+      if (filteredTable.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="5" class="p-8 text-center text-slate-500">Tidak ada transaksi pendapatan ditemukan.</td></tr>`;
+      } else {
+        tbody.innerHTML = filteredTable.map(tx => `
+          <tr class="hover:bg-slate-800/40 transition">
+            <td class="p-3.5 text-slate-400">${tx.tanggal}</td>
+            <td class="p-3.5 max-w-xs break-words font-mono text-[11px] text-slate-300">${tx.keterangan}</td>
+            <td class="p-3.5"><span class="bg-blue-500/10 text-blue-400 px-2 py-0.5 rounded text-[10px]">${tx.tagNama}</span></td>
+            <td class="p-3.5"><span class="bg-yellow-500/10 text-yellow-400 px-2 py-0.5 rounded text-[10px] font-medium">${tx.category}</span></td>
+            <td class="p-3.5 text-right font-semibold text-emerald-400">+${formatRp(tx.amount, true)}</td>
+          </tr>
+        `).join('');
+      }
+
+      // Calculations for Metric Cards
+      const totalIncome = allIncomeTx.reduce((acc, t) => acc + t.amount, 0);
+      document.getElementById('incMetricYear').textContent = formatRp(totalIncome, true);
+
+      // Current Month Income
+      const now = new Date();
+      const curY = now.getFullYear().toString();
+      const curM = String(now.getMonth() + 1).padStart(2, "0");
+      const prevMNum = now.getMonth() === 0 ? 12 : now.getMonth();
+      const prevYNum = now.getMonth() === 0 ? now.getFullYear() - 1 : now.getFullYear();
+      const prevM = String(prevMNum).padStart(2, "0");
+
+      const curKey = `${curY}-${curM}`;
+      const prevKey = `${prevYNum}-${prevM}`;
+
+      const curMonthSum = (dbData.monthlyData[curKey] || []).filter(t => t.type === 'CR').reduce((a, b) => a + b.amount, 0);
+      const prevMonthSum = (dbData.monthlyData[prevKey] || []).filter(t => t.type === 'CR').reduce((a, b) => a + b.amount, 0);
+
+      document.getElementById('incMetricMonth').textContent = formatRp(curMonthSum, true);
+
+      const growthElem = document.getElementById('incMetricMonthGrowth');
+      if (prevMonthSum > 0) {
+        const pct = ((curMonthSum - prevMonthSum) / prevMonthSum) * 100;
+        const isPos = pct >= 0;
+        growthElem.innerHTML = `<span class="${isPos ? 'text-emerald-400' : 'text-rose-400'} font-bold">${isPos ? '+' : ''}${pct.toFixed(1)}%</span> <span class="text-slate-500">vs bulan lalu (${formatRp(prevMonthSum, true)})</span>`;
+      } else {
+        growthElem.innerHTML = `<span class="text-slate-500">vs Bulan Lalu: ${formatRp(prevMonthSum, true)}</span>`;
+      }
+
+      const activeMonthsCount = Object.keys(monthlyTotals).length || 1;
+      document.getElementById('incMetricAvg').textContent = formatRp(totalIncome / activeMonthsCount, true);
+
+      // Render Charts
+      renderIncomeCharts(selectedYear, categoryTotals);
+    }
+
+    function renderIncomeCharts(selectedYear, categoryTotals) {
+      const months = ['01','02','03','04','05','06','07','08','09','10','11','12'];
+      const monthNames = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
+      
+      const targetYear = selectedYear === 'ALL' ? new Date().getFullYear().toString() : selectedYear;
+      const prevYear = (parseInt(targetYear) - 1).toString();
+
+      const currentYearData = months.map(m => {
+        const key = `${targetYear}-${m}`;
+        return (dbData.monthlyData[key] || []).filter(t => t.type === 'CR').reduce((a, b) => a + b.amount, 0);
+      });
+
+      const prevYearData = months.map(m => {
+        const key = `${prevYear}-${m}`;
+        return (dbData.monthlyData[key] || []).filter(t => t.type === 'CR').reduce((a, b) => a + b.amount, 0);
+      });
+
+      // Line Chart
+      const lineCtx = document.getElementById('incLineChart').getContext('2d');
+      if (incLineChartInstance) incLineChartInstance.destroy();
+
+      incLineChartInstance = new Chart(lineCtx, {
+        type: 'line',
+        data: {
+          labels: monthNames,
+          datasets: [
+            {
+              label: `Tahun ${targetYear}`,
+              data: currentYearData,
+              borderColor: '#10b981',
+              backgroundColor: 'rgba(16, 185, 129, 0.1)',
+              fill: true,
+              tension: 0.3
+            },
+            {
+              label: `Tahun ${prevYear}`,
+              data: prevYearData,
+              borderColor: '#64748b',
+              borderDash: [4, 4],
+              tension: 0.3
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { labels: { color: '#94a3b8', font: { size: 10 } } } },
+          scales: {
+            x: { ticks: { color: '#64748b', font: { size: 10 } }, grid: { color: '#1e293b' } },
+            y: { ticks: { color: '#64748b', font: { size: 10 } }, grid: { color: '#1e293b' } }
+          }
+        }
+      });
+
+      // Donut Chart
+      const donutCtx = document.getElementById('incDonutChart').getContext('2d');
+      if (incDonutChartInstance) incDonutChartInstance.destroy();
+
+      const catLabels = Object.keys(categoryTotals);
+      const catValues = Object.values(categoryTotals);
+
+      incDonutChartInstance = new Chart(donutCtx, {
+        type: 'doughnut',
+        data: {
+          labels: catLabels.length > 0 ? catLabels : ['Kosong'],
+          datasets: [{
+            data: catValues.length > 0 ? catValues : [1],
+            backgroundColor: ['#10b981', '#3b82f6', '#f59e0b', '#8b5cf6', '#ec4899', '#64748b']
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { position: 'bottom', labels: { color: '#94a3b8', font: { size: 10 } } } }
+        }
+      });
+    }
+
+    // ==========================================
+    // TAB 3: DASHBOARD PENGELUARAN (EXPENSE - DB)
+    // ==========================================
+    function renderExpenseDashboard() {
+      const selectedYear = document.getElementById('expYearSelect').value;
+      const selectedMonth = document.getElementById('expMonthSelect').value;
+      const searchQuery = document.getElementById('expTableSearch').value.toLowerCase();
+
+      let allExpenseTx = [];
+      const monthlyTotals = {};
+      const categoryTotals = {};
+
+      Object.keys(dbData.monthlyData || {}).forEach(sheetKey => {
+        const [y, m] = sheetKey.split('-');
+
+        if (selectedYear !== 'ALL' && y !== selectedYear) return;
+        if (selectedMonth !== 'ALL' && m !== selectedMonth) return;
+
+        const txList = dbData.monthlyData[sheetKey] || [];
+        txList.forEach(tx => {
+          if (tx.type === 'DB') {
+            allExpenseTx.push(tx);
+
+            if (!monthlyTotals[sheetKey]) monthlyTotals[sheetKey] = 0;
+            monthlyTotals[sheetKey] += tx.amount;
+
+            if (!categoryTotals[tx.category]) categoryTotals[tx.category] = 0;
+            categoryTotals[tx.category] += tx.amount;
+          }
+        });
+      });
+
+      // Filtered Table
+      const filteredTable = allExpenseTx.filter(tx => 
+        tx.keterangan.toLowerCase().includes(searchQuery) ||
+        tx.tagNama.toLowerCase().includes(searchQuery) ||
+        tx.category.toLowerCase().includes(searchQuery)
+      );
+
+      // Render Table
+      const tbody = document.getElementById('expTableBody');
+      if (filteredTable.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="5" class="p-8 text-center text-slate-500">Tidak ada transaksi pengeluaran ditemukan.</td></tr>`;
+      } else {
+        tbody.innerHTML = filteredTable.map(tx => `
+          <tr class="hover:bg-slate-800/40 transition">
+            <td class="p-3.5 text-slate-400">${tx.tanggal}</td>
+            <td class="p-3.5 max-w-xs break-words font-mono text-[11px] text-slate-300">${tx.keterangan}</td>
+            <td class="p-3.5"><span class="bg-blue-500/10 text-blue-400 px-2 py-0.5 rounded text-[10px]">${tx.tagNama}</span></td>
+            <td class="p-3.5"><span class="bg-rose-500/10 text-rose-400 px-2 py-0.5 rounded text-[10px] font-medium">${tx.category}</span></td>
+            <td class="p-3.5 text-right font-semibold text-rose-400">-${formatRp(tx.amount, true)}</td>
+          </tr>
+        `).join('');
+      }
+
+      // Calculations for Metric Cards
+      const totalExpense = allExpenseTx.reduce((acc, t) => acc + t.amount, 0);
+      document.getElementById('expMetricYear').textContent = formatRp(totalExpense, true);
+
+      // Top Category Calculation
+      let topCat = '-';
+      let maxVal = 0;
+      Object.keys(categoryTotals).forEach(cat => {
+        if (categoryTotals[cat] > maxVal) {
+          maxVal = categoryTotals[cat];
+          topCat = cat;
+        }
+      });
+
+      document.getElementById('expMetricTopCategory').textContent = topCat;
+      document.getElementById('expMetricTopCategoryVal').textContent = `Nominal: ${formatRp(maxVal, true)}`;
+
+      // Current Month Expense Comparison
+      const now = new Date();
+      const curY = now.getFullYear().toString();
+      const curM = String(now.getMonth() + 1).padStart(2, "0");
+      const prevMNum = now.getMonth() === 0 ? 12 : now.getMonth();
+      const prevYNum = now.getMonth() === 0 ? now.getFullYear() - 1 : now.getFullYear();
+      const prevM = String(prevMNum).padStart(2, "0");
+
+      const curKey = `${curY}-${curM}`;
+      const prevKey = `${prevYNum}-${prevM}`;
+
+      const curMonthSum = (dbData.monthlyData[curKey] || []).filter(t => t.type === 'DB').reduce((a, b) => a + b.amount, 0);
+      const prevMonthSum = (dbData.monthlyData[prevKey] || []).filter(t => t.type === 'DB').reduce((a, b) => a + b.amount, 0);
+
+      document.getElementById('expMetricMonth').textContent = formatRp(curMonthSum, true);
+
+      const growthElem = document.getElementById('expMetricMonthGrowth');
+      if (prevMonthSum > 0) {
+        const pct = ((curMonthSum - prevMonthSum) / prevMonthSum) * 100;
+        const isMore = pct > 0;
+        growthElem.innerHTML = `<span class="${isMore ? 'text-rose-400' : 'text-emerald-400'} font-bold">${isMore ? '+' : ''}${pct.toFixed(1)}%</span> <span class="text-slate-500">vs bulan lalu (${formatRp(prevMonthSum, true)})</span>`;
+      } else {
+        growthElem.innerHTML = `<span class="text-slate-500">vs Bulan Lalu: ${formatRp(prevMonthSum, true)}</span>`;
+      }
+
+      // Render Charts
+      renderExpenseCharts(selectedYear, categoryTotals);
+    }
+
+    function renderExpenseCharts(selectedYear, categoryTotals) {
+      const months = ['01','02','03','04','05','06','07','08','09','10','11','12'];
+      const monthNames = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
+      
+      const targetYear = selectedYear === 'ALL' ? new Date().getFullYear().toString() : selectedYear;
+
+      const monthlyData = months.map(m => {
+        const key = `${targetYear}-${m}`;
+        return (dbData.monthlyData[key] || []).filter(t => t.type === 'DB').reduce((a, b) => a + b.amount, 0);
+      });
+
+      // Bar Chart
+      const barCtx = document.getElementById('expBarChart').getContext('2d');
+      if (expBarChartInstance) expBarChartInstance.destroy();
+
+      expBarChartInstance = new Chart(barCtx, {
+        type: 'bar',
+        data: {
+          labels: monthNames,
+          datasets: [{
+            label: `Pengeluaran ${targetYear}`,
+            data: monthlyData,
+            backgroundColor: 'rgba(244, 63, 94, 0.8)',
+            borderRadius: 6
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            x: { ticks: { color: '#64748b', font: { size: 10 } }, grid: { display: false } },
+            y: { ticks: { color: '#64748b', font: { size: 10 } }, grid: { color: '#1e293b' } }
+          }
+        }
+      });
+
+      // Donut Chart
+      const donutCtx = document.getElementById('expDonutChart').getContext('2d');
+      if (expDonutChartInstance) expDonutChartInstance.destroy();
+
+      const catLabels = Object.keys(categoryTotals);
+      const catValues = Object.values(categoryTotals);
+
+      expDonutChartInstance = new Chart(donutCtx, {
+        type: 'doughnut',
+        data: {
+          labels: catLabels.length > 0 ? catLabels : ['Kosong'],
+          datasets: [{
+            data: catValues.length > 0 ? catValues : [1],
+            backgroundColor: ['#f43f5e', '#fb923c', '#eab308', '#a855f7', '#ec4899', '#64748b']
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { position: 'bottom', labels: { color: '#94a3b8', font: { size: 10 } } } }
+        }
+      });
+    }
+  </script>
+</body>
+</html>
