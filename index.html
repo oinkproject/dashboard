@@ -299,6 +299,7 @@
             <input type="checkbox" id="hideDecimals" checked onchange="renderStaging()" />
             <span>Hilangkan desimal</span>
           </label>
+          <button class="btn btn-ghost" onclick="openImport()"><i class="fa-solid fa-file-import"></i> Import Data Lama</button>
           <label class="btn btn-primary cursor-pointer"><i class="fa-solid fa-folder-open"></i> Pilih CSV
             <input type="file" id="csvFile" accept=".csv,text/csv" class="hidden" onchange="handleFileUpload(event)" />
           </label>
@@ -425,7 +426,7 @@
     setTimeout(() => { el.style.opacity = '0'; el.style.transition = 'opacity .3s'; setTimeout(() => el.remove(), 300); }, type === 'error' ? 6000 : 3500);
   }
   let modalResolve = null;
-  function openModal(html) { $('modalBox').innerHTML = html; $('modal').classList.remove('hidden'); }
+  function openModal(html, wide) { $('modalBox').className = 'card w-full p-5 shadow-2xl ' + (wide ? 'max-w-3xl max-h-[90vh] overflow-y-auto' : 'max-w-md'); $('modalBox').innerHTML = html; $('modal').classList.remove('hidden'); }
   function closeModal(val) { $('modal').classList.add('hidden'); if (modalResolve) { modalResolve(val === true); modalResolve = null; } }
   function confirmDialog(title, msg, okLabel = 'Ya, lanjut') {
     return new Promise(res => {
@@ -1068,7 +1069,7 @@
     const off = (stPage - 1) * ST_SIZE;
     $('stBody').innerHTML = staging.slice(off, off + ST_SIZE).map((tx, i) => {
       const idx = off + i;
-      const dateD = tx.tanggal === 'PEND' ? `<span class="chip !text-amber-500 !bg-amber-500/10 !border-amber-500/30"><i class="fa-regular fa-clock"></i> PENDING</span>` : esc(tx.tanggal);
+      const dateD = tx.tanggal === 'PEND' ? `<span class="chip !text-amber-500 !bg-amber-500/10 !border-amber-500/30"><i class="fa-regular fa-clock"></i> PENDING</span>` : esc(tx.tanggal) + (tx.src === 'perkiraan' ? ' <i class="fa-solid fa-circle-question text-amber-500" title="Tanggal diperkirakan dari baris di atasnya"></i>' : '');
       return `<tr class="${tx.selected ? 'row-sel' : ''}">
         <td class="p-3 text-center"><input type="checkbox" class="row-checkbox" data-i="${idx}" ${tx.selected ? 'checked' : ''} /></td>
         <td class="p-3 whitespace-nowrap muted">${dateD}</td>
@@ -1105,10 +1106,10 @@
     staging = staging.filter(t => !t.selected); renderStaging(); toast(`${n} baris dihapus`, 'success');
   }
   async function autoFilterNonJoki() {
-    const n = staging.filter(t => !t.keterangan.toUpperCase().includes('JOKI')).length;
+    const n = staging.filter(t => !t.imp && !t.keterangan.toUpperCase().includes('JOKI')).length;
     if (!n) { toast('Semua transaksi sudah mengandung kata JOKI.', 'info'); return; }
     if (!(await confirmDialog('Hapus selain JOKI?', `${n} transaksi tanpa kata "JOKI" pada keterangannya akan dibuang dari staging.`, 'Hapus'))) return;
-    staging = staging.filter(t => t.keterangan.toUpperCase().includes('JOKI')); stPage = 1; renderStaging();
+    staging = staging.filter(t => t.imp || t.keterangan.toUpperCase().includes('JOKI')); stPage = 1; renderStaging();
     toast(`${n} transaksi bukan JOKI dihapus`, 'success');
   }
 
@@ -1117,7 +1118,7 @@
     const btn = $('btnSend'); btn.disabled = true;
     btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Mengirim...';
     try {
-      const data = staging.map(({ selected, ...rest }) => rest);
+      const data = staging.map(({ selected, imp, sheet, src, ...rest }) => rest);
       const r = await api('save', { data });
       toast(r.message || 'Data tersimpan', 'success');
       staging = []; renderStaging();
@@ -1137,6 +1138,186 @@
     ['dragleave', 'drop'].forEach(ev => z.addEventListener(ev, e => { e.preventDefault(); z.classList.remove('drop-active'); }));
     z.addEventListener('drop', e => { const f = e.dataTransfer.files[0]; if (f) readCsvFile(f); });
   })();
+
+  /* =====================================================================
+     IMPORT DATA LAMA (XLSX / CSV dengan format acak)
+  ===================================================================== */
+  /*IMPORT_CORE_START*/
+  const MONTH_NAMES = { JANUARI:1, JAN:1, JANUARY:1, FEBRUARI:2, FEB:2, FEBRUARY:2, MARET:3, MAR:3, MARCH:3, APRIL:4, APR:4, MEI:5, MAY:5,
+    JUNI:6, JUN:6, JUNE:6, JULI:7, JUL:7, JULY:7, AGUSTUS:8, AGU:8, AGS:8, AUG:8, AUGUST:8, SEPTEMBER:9, SEP:9, SEPT:9,
+    OKTOBER:10, OKT:10, OCT:10, OCTOBER:10, NOVEMBER:11, NOV:11, DESEMBER:12, DES:12, DEC:12, DECEMBER:12 };
+  const sheetMonth = name => MONTH_NAMES[String(name).trim().toUpperCase()] || 0;
+  const isNum = v => typeof v === 'number' && isFinite(v);
+  function toNum(v) {
+    if (isNum(v)) return v;
+    if (typeof v === 'string') { const s = v.replace(/^'/, '').trim(); if (/^-?\d+(\.\d+)?$/.test(s)) return parseFloat(s); }
+    return null;
+  }
+  function validDate(p, year) {
+    if (!p || p.m < 1 || p.m > 12 || p.d < 1 || p.d > 31) return false;
+    const dt = new Date(p.y || year, p.m - 1, p.d);
+    return dt.getMonth() === p.m - 1;
+  }
+  function parseDateCell(v, year) {
+    if (isNum(v) && v > 36526 && v < 60000) { const dt = new Date(Math.round((v - 25569) * 864e5)); return { d: dt.getUTCDate(), m: dt.getUTCMonth() + 1, y: dt.getUTCFullYear() }; }
+    if (typeof v !== 'string') return null;
+    const s = v.replace(/^'/, '').trim();
+    let m = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec(s); if (m) return { d: +m[1], m: +m[2], y: +m[3] };
+    m = /^(\d{1,2})\/(\d{1,2})$/.exec(s); if (m) return { d: +m[1], m: +m[2], y: year };
+    m = /^(\d{4})-(\d{2})-(\d{2})/.exec(s); if (m) return { d: +m[3], m: +m[2], y: +m[1] };
+    return null;
+  }
+  // Tanggal dari kode di keterangan: "...0101/FTSCY/..." (ddmm) atau "CR 02/11 ZL3X1" (mm/dd)
+  function dateFromDesc(ket, monthHint, year) {
+    let m = /\b(\d{2})(\d{2})\/FTSCY/.exec(ket);
+    if (m) { const p = { d: +m[1], m: +m[2], y: year }; if (validDate(p, year) && (!monthHint || p.m === monthHint)) return p; }
+    m = /\bCR (\d{2})\/(\d{2}) [A-Z0-9]{4,6}\b/.exec(ket);
+    if (m) { const p = { d: +m[2], m: +m[1], y: year }; if (validDate(p, year) && (!monthHint || p.m === monthHint)) return p; }
+    return null;
+  }
+  function extractNameImport(raw) {
+    const raw0 = String(raw || '').trim();
+    const s = raw0.replace(/\s+/g, ' ');
+    let m = /TRFDN-(.+?)ESPAY\b/.exec(s); if (m) return m[1].trim();
+    if (/GoPay/i.test(s)) return 'GoPay';
+    if (/AIRPAY/i.test(s)) return 'ShopeePay (AirPay)';
+    m = /\bDR\s+\d{3}\s+(.+)$/.exec(s); if (m) return m[1].trim();
+    const seg = raw0.split(/ {2,}/);
+    if (/TRSF E-BANKING|TRANSFER/.test(raw0) && seg.length > 1) {
+      const tail = seg[seg.length - 1].replace(/^[\d.]+(?=[A-Za-z])/, '').trim();
+      if (/[A-Za-z]{3}/.test(tail) && !/^\d/.test(tail)) return tail;
+    }
+    const norm = s.replace(/(\d)(?=[A-Za-z])/g, '$1 ');
+    m = /((?:[A-Z][A-Z.'\-]*\s+)*[A-Z][A-Z.'\-]*)\s*$/.exec(norm);
+    if (m && m[1].trim().length >= 3) return m[1].trim();
+    return 'Lainnya';
+  }
+
+  function parseSheetRows(sheetName, rows, year) {
+    const hint = sheetMonth(sheetName);
+    const items = [];
+    const stats = { sheet: sheetName, rows: 0, sum: 0, fromCol: 0, fromDesc: 0, est: 0, mismatch: 0, debit: 0, skipped: 0 };
+    let lastDate = null;
+    for (const r of rows) {
+      if (!r) continue;
+      // Baris transaksi = ada sel "CR"/"DB" yang didahului angka (nominal)
+      let ci = -1;
+      for (let i = 1; i < r.length; i++) {
+        const t = typeof r[i] === 'string' ? r[i].trim().toUpperCase() : '';
+        if ((t === 'CR' || t === 'DB') && toNum(r[i - 1]) !== null) { ci = i; break; }
+      }
+      if (ci < 0) continue;
+      if (String(r[ci]).trim().toUpperCase() === 'DB') { stats.debit++; continue; }
+      const amount = toNum(r[ci - 1]);
+      if (!amount) { stats.skipped++; continue; }
+
+      let ket = '', dateCell = null;
+      for (let i = 0; i < ci - 1; i++) {
+        const v = r[i];
+        if (v == null) continue;
+        if (dateCell == null && parseDateCell(v, year) && (typeof v !== 'string' || v.replace(/^'/, '').trim().length <= 10)) { dateCell = v; continue; }
+        if (typeof v === 'string' && v.trim().length >= 8 && v.trim().length > ket.length) ket = v.trim();
+      }
+      const sal = toNum(r[ci + 1]);
+
+      let dt = null, src = '';
+      if (dateCell != null) { const p = parseDateCell(dateCell, year); if (validDate(p, year)) { dt = p; src = 'kolom'; } }
+      if (!dt) { const p = dateFromDesc(ket, hint, year); if (p) { dt = p; src = 'keterangan'; } }
+      if (!dt && lastDate) { dt = lastDate; src = 'perkiraan'; }
+      if (!dt && hint) { dt = { d: 1, m: hint, y: year }; src = 'perkiraan'; }
+      if (!dt) { stats.skipped++; continue; }
+      if (src !== 'perkiraan') lastDate = dt;
+      if (hint && dt.m !== hint) stats.mismatch++;
+
+      if (src === 'kolom') stats.fromCol++; else if (src === 'keterangan') stats.fromDesc++; else stats.est++;
+      stats.rows++; stats.sum += amount;
+      items.push({ tanggal: `${pad(dt.d)}/${pad(dt.m)}/${dt.y || year}`, keterangan: ket, tagNama: extractNameImport(ket), type: 'CR', amount, saldo: sal || 0, sheet: sheetName, src });
+    }
+    return { items, stats };
+  }
+
+  function parseWorkbook(wb, year) {
+    const items = [], sheets = [];
+    wb.SheetNames.forEach(name => {
+      const rows = XLSX.utils.sheet_to_json(wb.Sheets[name], { header: 1, raw: true, defval: null, blankrows: false });
+      const r = parseSheetRows(name, rows, year);
+      r.items.forEach(x => items.push(x)); sheets.push(r.stats);
+    });
+    const seen = {};
+    items.forEach(x => {
+      const sig = `${x.tanggal}|${x.keterangan}|${x.amount.toFixed(2)}`;
+      const n = seen[sig] = (seen[sig] || 0) + 1;
+      x.id = `IM${hashStr(sig)}-${n}`;
+    });
+    return { items, sheets };
+  }
+  /*IMPORT_CORE_END*/
+
+  function loadXLSX() {
+    if (window.XLSX) return Promise.resolve();
+    return new Promise((res, rej) => {
+      const s = document.createElement('script');
+      s.src = 'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js';
+      s.onload = res; s.onerror = () => rej(new Error('Pustaka XLSX gagal dimuat. Cek koneksi internet.'));
+      document.head.appendChild(s);
+    });
+  }
+
+  let imp = { wb: null, name: '', year: new Date().getFullYear() - 1, result: null };
+  function openImport() {
+    imp = { wb: null, name: '', year: new Date().getFullYear() - 1, result: null };
+    openModal(`<div class="flex items-start justify-between mb-3"><h3 class="font-bold text-sm"><i class="fa-solid fa-file-import me-2"></i>Import Data Lama</h3>
+      <button class="btn btn-ghost !px-2 !py-1" onclick="closeModal(false)"><i class="fa-solid fa-xmark"></i></button></div>
+      <p class="text-xs muted mb-4">Upload file Excel (.xlsx) atau CSV. Tiap sheet dibaca otomatis: nominal dikenali dari penanda CR, tanggal dari kolom tanggal atau dari kode di keterangan transaksi.</p>
+      <div class="flex flex-wrap items-end gap-3 mb-4">
+        <label class="btn btn-primary cursor-pointer"><i class="fa-solid fa-folder-open"></i> Pilih file<input type="file" accept=".xlsx,.xls,.csv" class="hidden" onchange="handleImportFile(event)" /></label>
+        <div><div class="text-[11px] muted mb-1">Tahun data</div><input id="impYear" type="number" class="input w-24" value="${imp.year}" onchange="onImportYear()" /></div>
+        <span id="impName" class="text-xs muted"></span>
+      </div><div id="impPreview"></div>`, true);
+  }
+  async function handleImportFile(e) {
+    const f = e.target.files[0]; if (!f) return; e.target.value = '';
+    $('impPreview').innerHTML = '<div class="skeleton h-24"></div>';
+    try {
+      await loadXLSX();
+      imp.wb = XLSX.read(await f.arrayBuffer(), { type: 'array' }); imp.name = f.name;
+      const ym = /(20\d{2})/.exec(f.name); if (ym) { imp.year = +ym[1]; $('impYear').value = imp.year; }
+      $('impName').textContent = f.name;
+      runImportParse();
+    } catch (err) { $('impPreview').innerHTML = ''; toast('Gagal membaca file: ' + err.message, 'error'); }
+  }
+  function onImportYear() { imp.year = +$('impYear').value || imp.year; if (imp.wb) runImportParse(); }
+  function runImportParse() { imp.result = parseWorkbook(imp.wb, imp.year); renderImportPreview(); }
+
+  function renderImportPreview() {
+    const { items, sheets } = imp.result;
+    const total = items.reduce((a, x) => a + x.amount, 0);
+    const rows = sheets.map(s => `<tr><td class="p-2.5 font-medium">${esc(s.sheet)}</td><td class="p-2.5 text-right">${s.rows}</td>
+      <td class="p-2.5 text-right font-semibold">${s.rows ? fmtRp(s.sum) : '-'}</td><td class="p-2.5 text-right muted">${s.fromCol}</td><td class="p-2.5 text-right muted">${s.fromDesc}</td>
+      <td class="p-2.5 text-right ${s.est ? 'text-amber-500 font-semibold' : 'muted'}">${s.est}</td>
+      <td class="p-2.5 text-[11px] muted">${s.rows ? (s.mismatch ? s.mismatch + ' beda bulan dengan nama sheet' : 'OK') : 'Tidak ada transaksi, dilewati'}</td></tr>`).join('');
+    const warn = [];
+    const months = {};
+    items.forEach(x => { const p = x.tanggal.split('/'); const k = `${p[2]}-${p[1]}`; months[k] = 1; });
+    const clash = Object.keys(months).filter(k => db[k] && db[k].length).sort();
+    if (clash.length) warn.push(`Google Sheets sudah punya data di bulan yang sama (${clash.join(', ')}). Transaksi yang identik otomatis dilewati, tapi cek dulu agar tidak dobel.`);
+    else if (!rendered) warn.push('Data dashboard belum dimuat, jadi bentrok dengan data yang sudah ada belum bisa dicek. Transaksi identik tetap otomatis dilewati saat dikirim.');
+    const est = items.filter(x => x.src === 'perkiraan').length;
+    if (est) warn.push(`${est} transaksi tidak punya tanggal sendiri (misalnya BI-FAST), jadi tanggalnya diperkirakan dari baris di atasnya. Ditandai ikon tanda tanya di staging.`);
+    $('impPreview').innerHTML = `
+      <div class="overflow-x-auto scroll-thin rounded-xl mb-3" style="border:1px solid var(--border)"><table class="w-full text-xs text-left">
+        <thead><tr><th class="p-2.5">Sheet</th><th class="p-2.5 text-right">Transaksi</th><th class="p-2.5 text-right">Total</th><th class="p-2.5 text-right">Tgl kolom</th><th class="p-2.5 text-right">Tgl keterangan</th><th class="p-2.5 text-right">Tgl perkiraan</th><th class="p-2.5">Catatan</th></tr></thead>
+        <tbody>${rows}<tr style="background:var(--surface2)" class="font-bold"><td class="p-2.5">Total</td><td class="p-2.5 text-right">${items.length}</td><td class="p-2.5 text-right">${fmtRp(total)}</td><td colspan="4"></td></tr></tbody></table></div>
+      ${warn.map(w => `<p class="text-[11px] mb-2 flex gap-2"><i class="fa-solid fa-triangle-exclamation text-amber-500 mt-0.5"></i><span>${esc(w)}</span></p>`).join('')}
+      <div class="flex justify-end gap-2 mt-4"><button class="btn btn-ghost" onclick="closeModal(false)">Batal</button>
+        <button class="btn btn-primary" ${items.length ? '' : 'disabled'} onclick="confirmImport()"><i class="fa-solid fa-arrow-right"></i> Masukkan ${items.length} transaksi ke Staging</button></div>`;
+  }
+  function confirmImport() {
+    const items = imp.result.items.map(x => Object.assign({}, x, { selected: false, imp: true }));
+    staging = staging.concat(items); stPage = 1;
+    closeModal(false); renderStaging();
+    toast(`${items.length} transaksi dari file lama masuk staging. Periksa, lalu kirim ke Google Sheets.`, 'success');
+  }
 
   /* =====================================================================
      INIT
