@@ -1193,6 +1193,7 @@
     return 'Lainnya';
   }
 
+  const BANK_RE = /\b(TRSF|BI-FAST|SWITCHING|TRANSFER|E-BANKING|KR OTOMATIS|QRC?|TRF|SETORAN)\b/i;
   function parseSheetRows(sheetName, rows, year) {
     const hint = sheetMonth(sheetName);
     const items = [];
@@ -1206,19 +1207,32 @@
         const t = typeof r[i] === 'string' ? r[i].trim().toUpperCase() : '';
         if ((t === 'CR' || t === 'DB') && toNum(r[i - 1]) !== null) { ci = i; break; }
       }
-      if (ci < 0) continue;
-      if (String(r[ci]).trim().toUpperCase() === 'DB') { stats.debit++; continue; }
-      const amount = toNum(r[ci - 1]);
-      if (!amount) { stats.skipped++; continue; }
-
-      let ket = '', dateCell = null;
-      for (let i = 0; i < ci - 1; i++) {
-        const v = r[i];
-        if (v == null) continue;
-        if (dateCell == null && parseDateCell(v, year) && (typeof v !== 'string' || v.replace(/^'/, '').trim().length <= 10)) { dateCell = v; continue; }
-        if (typeof v === 'string' && v.trim().length >= 8 && v.trim().length > ket.length) ket = v.trim();
+      let amount, ket = '', dateCell = null, sal = null;
+      if (ci >= 0) {
+        if (String(r[ci]).trim().toUpperCase() === 'DB') { stats.debit++; continue; }
+        amount = toNum(r[ci - 1]);
+        for (let i = 0; i < ci - 1; i++) {
+          const v = r[i];
+          if (v == null) continue;
+          if (dateCell == null && parseDateCell(v, year) && (typeof v !== 'string' || v.replace(/^'/, '').trim().length <= 10)) { dateCell = v; continue; }
+          if (typeof v === 'string' && v.trim().length >= 8 && v.trim().length > ket.length) ket = v.trim();
+        }
+        sal = toNum(r[ci + 1]);
+      } else {
+        // Tanpa penanda CR/DB: pola [tanggal] [keterangan] [nominal]
+        let ki = -1;
+        for (let i = 0; i < r.length; i++) {
+          const v = r[i];
+          if (v == null) continue;
+          if (dateCell == null && parseDateCell(v, year) && (typeof v !== 'string' || v.replace(/^'/, '').trim().length <= 10)) { dateCell = v; continue; }
+          if (typeof v === 'string' && v.trim().length >= 8 && !parseDateCell(v, year)) { ki = i; ket = v.trim(); break; }
+        }
+        if (ki < 0) continue;
+        if (dateCell == null && !BANK_RE.test(ket)) continue;   // abaikan tabel ringkasan
+        for (let i = ki + 1; i < r.length; i++) if (isNum(r[i])) { amount = r[i]; break; }
+        if (amount == null) continue;
       }
-      const sal = toNum(r[ci + 1]);
+      if (!amount || amount < 0) { stats.skipped++; continue; }
 
       let dt = null, src = '';
       if (dateCell != null) { const p = parseDateCell(dateCell, year); if (validDate(p, year)) { dt = p; src = 'kolom'; } }
