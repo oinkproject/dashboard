@@ -1,222 +1,122 @@
 <!DOCTYPE html>
-<html lang="id" class="dark">
+<html lang="id">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>BCA Mutation Joki Income Tracker</title>
-  
+  <title>Dashboard Pendapatan Joki BCA</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <script>
-    tailwind.config = {
-      darkMode: 'class',
-      theme: {
-        extend: {
-          colors: {
-            brand: {
-              50: '#eff6ff',
-              100: '#dbeafe',
-              500: '#3b82f6',
-              600: '#2563eb',
-              700: '#1d4ed8',
-              800: '#1e40af',
-              900: '#1e3a8a',
-            }
-          }
-        }
-      }
-    }
-  </script>
-
-  <!-- FontAwesome Icons & Chart.js -->
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
-
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
   <style>
-    body { font-family: 'Inter', sans-serif; }
-    ::-webkit-scrollbar { width: 6px; height: 6px; }
-    ::-webkit-scrollbar-track { background: #0f172a; }
-    ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
-    ::-webkit-scrollbar-thumb:hover { background: #475569; }
+    /* Styling checkbox kustom agar lebih besar dan kontras */
+    input[type="checkbox"].row-checkbox {
+      width: 1.25rem;
+      height: 1.25rem;
+      cursor: pointer;
+      accent-color: #3b82f6;
+    }
   </style>
 </head>
-<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col antialiased">
+<body class="bg-slate-900 text-slate-100 min-h-screen font-sans pb-12">
 
-  <header class="bg-slate-900 border-b border-slate-800 sticky top-0 z-30 shadow-md">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-      <div class="flex items-center justify-between h-16">
-        
-        <!-- Logo / Title -->
-        <div class="flex items-center space-x-3">
-          <div class="w-9 h-9 bg-emerald-600 rounded-xl flex items-center justify-center shadow-lg shadow-emerald-500/30">
-            <i class="fa-solid fa-gamepad text-white text-lg"></i>
-          </div>
-          <div>
-            <h1 class="font-bold text-base text-white leading-tight">Joki Income BCA</h1>
-            <p class="text-[10px] text-slate-400">Staging & Panel Pendapatan Joki</p>
-          </div>
+  <!-- Header Navigasi & Password Status -->
+  <header class="bg-slate-800/90 border-b border-slate-700 sticky top-0 z-30 backdrop-blur-md">
+    <div class="max-w-7xl mx-auto px-4 py-3 flex flex-col sm:flex-row items-center justify-between gap-3">
+      <div class="flex items-center gap-3">
+        <div class="p-2 bg-blue-600/20 text-blue-400 rounded-lg border border-blue-500/30">
+          <i class="fa-solid fa-gamepad text-xl"></i>
         </div>
-
-        <!-- Navigation Tabs -->
-        <nav class="hidden md:flex space-x-2">
-          <button onclick="switchTab('staging')" id="nav-staging"
-            class="px-4 py-2 rounded-xl text-xs font-semibold flex items-center space-x-2 transition bg-blue-600 text-white shadow-md shadow-blue-600/20">
-            <i class="fa-solid fa-file-csv"></i>
-            <span>1. Staging & Import Mutasi</span>
-          </button>
-          <button onclick="switchTab('income')" id="nav-income"
-            class="px-4 py-2 rounded-xl text-xs font-semibold flex items-center space-x-2 text-slate-400 hover:text-slate-200 hover:bg-slate-800 transition">
-            <i class="fa-solid fa-chart-line text-emerald-400"></i>
-            <span>2. Dashboard Pendapatan Joki</span>
-          </button>
-        </nav>
-
-        <!-- Actions / Settings -->
-        <div class="flex items-center space-x-3">
-          <div id="statusBadge" class="hidden sm:flex items-center space-x-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[11px] font-medium">
-            <span id="statusDot" class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-            <span id="apiStatusText">Apps Script Ready</span>
-          </div>
-
-          <button onclick="promptPassword(true)" title="Ganti Password API" class="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-400 hover:text-white transition">
-            <i class="fa-solid fa-key text-xs"></i>
-          </button>
+        <div>
+          <h1 class="text-lg font-bold text-white tracking-wide">Joki Income Tracker</h1>
+          <p class="text-[11px] text-slate-400">Mutasi BCA & Staging Khusus Pendapatan Joki</p>
         </div>
       </div>
 
-      <!-- Mobile Navigation Row -->
-      <div class="flex md:hidden border-t border-slate-800 py-2 space-x-2">
-        <button onclick="switchTab('staging')" id="nav-staging-m"
-          class="flex-1 px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center justify-center space-x-1.5 bg-blue-600 text-white">
-          <i class="fa-solid fa-file-csv"></i>
-          <span>Staging</span>
+      <!-- Navigation Tabs & Config -->
+      <div class="flex items-center gap-2">
+        <button id="tabBtnStaging" onclick="switchTab('staging')" class="px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-blue-600 text-white shadow-lg transition flex items-center gap-1.5">
+          <i class="fa-solid fa-upload"></i> Upload & Staging
         </button>
-        <button onclick="switchTab('income')" id="nav-income-m"
-          class="flex-1 px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center justify-center space-x-1.5 text-slate-400 hover:bg-slate-800">
-          <i class="fa-solid fa-chart-line text-emerald-400"></i>
-          <span>Dashboard</span>
+        <button id="tabBtnDashboard" onclick="switchTab('dashboard')" class="px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-slate-700 text-slate-300 hover:bg-slate-600 transition flex items-center gap-1.5">
+          <i class="fa-solid fa-chart-line"></i> Dashboard Pendapatan
+        </button>
+        <button onclick="promptChangePassword()" title="Ganti Password API" class="p-2 bg-slate-700 hover:bg-slate-600 text-slate-300 rounded-lg text-xs transition ml-2">
+          <i class="fa-solid fa-key"></i>
         </button>
       </div>
     </div>
   </header>
 
-  <main class="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8 space-y-6">
+  <main class="max-w-7xl mx-auto px-4 mt-6">
 
-    <!-- TAB 1: STAGING & IMPORT CSV (CR ONLY) -->
-    <section id="tab-staging" class="space-y-6">
-      
-      <!-- Top Upload Banner -->
-      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl relative overflow-hidden">
-        <div class="flex flex-col md:flex-row items-center justify-between gap-6">
-          <div class="space-y-1 text-center md:text-left">
-            <h2 class="text-xl font-bold text-white flex items-center justify-center md:justify-start gap-2">
-              <i class="fa-solid fa-cloud-arrow-up text-blue-500"></i>
-              Import Mutasi BCA (Kredit / CR Only)
-            </h2>
-            <p class="text-xs text-slate-400 max-w-xl">
-              Unggah CSV mutasi BCA. Transaksi debit (DB) otomatis diabaikan. Hapus transaksi yang bukan joki, lalu tekan <b>Send Data</b>.
-            </p>
-          </div>
+    <!-- ========================================== -->
+    <!-- TAB 1: UPLOAD & STAGING                    -->
+    <!-- ========================================== -->
+    <section id="tabStaging" class="space-y-6">
 
-          <div class="flex flex-wrap items-center justify-center gap-3">
-            <label class="flex items-center gap-2 bg-slate-800 border border-slate-700 px-3.5 py-2 rounded-xl text-xs cursor-pointer hover:bg-slate-750 transition text-slate-300">
-              <input type="checkbox" id="hideDecimals" class="w-4 h-4 rounded border-slate-700 text-blue-600 focus:ring-0 bg-slate-900 cursor-pointer" checked onchange="renderStaging()" />
-              <span>Hilangkan Desimal (<code>.00</code>)</span>
-            </label>
+      <!-- Baris Pilihan Controls -->
+      <div class="bg-slate-800/80 border border-slate-700/60 rounded-xl p-4 flex flex-col md:flex-row items-center justify-between gap-4">
+        <div>
+          <h2 class="text-sm font-bold text-white flex items-center gap-2">
+            <i class="fa-solid fa-file-csv text-blue-400"></i> Upload File Mutasi BCA
+          </h2>
+          <p class="text-xs text-slate-400 mt-0.5">Sistem akan otomatis menghapus transaksi Debit (DB) dan menyisakan Kredit (CR).</p>
+        </div>
 
-            <label class="bg-blue-600 hover:bg-blue-500 text-white font-semibold text-xs px-5 py-2.5 rounded-xl cursor-pointer transition flex items-center gap-2 shadow-lg shadow-blue-600/30">
-              <i class="fa-solid fa-file-arrow-up"></i>
-              <span>Pilih File CSV</span>
-              <input type="file" id="csvFileInput" accept=".csv" class="hidden" onchange="handleFileUpload(event)" />
-            </label>
-          </div>
+        <div class="flex flex-wrap items-center gap-3 w-full md:w-auto justify-end">
+          <label class="flex items-center gap-2 bg-slate-900 border border-slate-700 px-3 py-2 rounded-lg text-xs cursor-pointer hover:bg-slate-750 transition">
+            <input type="checkbox" id="hideDecimals" class="rounded border-slate-700 text-blue-600 focus:ring-0" checked onchange="renderStagingTable()" />
+            <span>Hilangkan <code>.00</code></span>
+          </label>
+
+          <label class="bg-blue-600 hover:bg-blue-500 text-white font-medium text-xs px-4 py-2 rounded-lg cursor-pointer transition flex items-center gap-2 shadow-lg shadow-blue-500/20">
+            <i class="fa-solid fa-folder-open"></i> Pilih CSV BCA
+            <input type="file" id="csvFile" accept=".csv" class="hidden" onchange="handleFileUpload(event)" />
+          </label>
         </div>
       </div>
 
-      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div class="bg-slate-900/80 border border-slate-800 rounded-xl p-4 shadow-sm">
-          <span class="text-xs text-emerald-400 font-medium flex items-center gap-1.5"><i class="fa-solid fa-arrow-down-left"></i> Total Pendapatan Joki (Staging)</span>
-          <div class="text-2xl font-bold text-emerald-400 mt-2" id="stgTotalCR">Rp 0</div>
-          <p class="text-[10px] text-slate-400 mt-1" id="stgCountCR">0 transaksi masuk</p>
-        </div>
-
-        <div class="bg-slate-900/80 border border-slate-800 rounded-xl p-4 shadow-sm">
-          <span class="text-xs text-blue-400 font-medium flex items-center gap-1.5"><i class="fa-solid fa-receipt"></i> Total Baris Siap Dikirim</span>
-          <div class="text-2xl font-bold text-white mt-2" id="stgTotalTx">0</div>
-          <p class="text-[10px] text-slate-400 mt-1" id="stgAccountInfo">Belum ada file diunggah</p>
-        </div>
-
-        <div class="bg-slate-900/80 border border-slate-800 rounded-xl p-4 shadow-sm flex flex-col justify-center">
-          <button onclick="autoPurgeNonJoki()" id="btnPurgeNonJoki" disabled
-            class="w-full py-2.5 px-4 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-amber-400 font-bold text-xs transition flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed">
-            <i class="fa-solid fa-wand-magic-sparkles"></i>
-            <span>Hapus Otomatis Selain "JOKI"</span>
+      <!-- Action & Quick Filter Bar -->
+      <div id="stagingActionsBar" class="hidden bg-slate-800/50 border border-slate-700/50 rounded-xl p-4 flex flex-col md:flex-row items-center justify-between gap-3">
+        <div class="flex flex-wrap items-center gap-2 w-full md:w-auto">
+          <button onclick="autoFilterNonJoki()" class="bg-amber-600/20 hover:bg-amber-600/30 text-amber-300 border border-amber-500/30 font-medium text-xs px-3 py-1.5 rounded-lg transition flex items-center gap-1.5">
+            <i class="fa-solid fa-wand-magic-sparkles"></i> Hapus Otomatis Selain Joki
           </button>
-          <p class="text-[10px] text-slate-500 text-center mt-1.5">Membersihkan transaksi yang tidak memuat nama/keterangan joki</p>
-        </div>
-      </div>
-
-      <div class="bg-slate-900/60 border border-slate-800 rounded-2xl p-4 space-y-4">
-        <div class="flex flex-col lg:flex-row gap-3 items-center justify-between">
           
-          <!-- Search Input -->
-          <div class="relative w-full lg:w-80">
-            <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
-            <input type="text" id="stgSearchInput" placeholder="Cari keterangan / nama..." oninput="renderStaging()"
-              class="w-full bg-slate-950 border border-slate-800 rounded-xl pl-9 pr-3 py-2 text-xs text-white focus:outline-none focus:border-blue-500 transition" />
-          </div>
-
-          <!-- Actions -->
-          <div class="flex flex-wrap items-center gap-2 w-full lg:w-auto justify-end">
-            <select id="stgFilterNameSelect" onchange="renderStaging()" class="bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-blue-500">
-              <option value="ALL">-- Semua Tag Nama --</option>
-            </select>
-
-            <button onclick="deleteSelectedRows()" id="btnDeleteSelected" disabled
-              class="px-3.5 py-2 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 text-rose-400 text-xs font-semibold flex items-center gap-1.5 transition disabled:opacity-40 disabled:cursor-not-allowed">
-              <i class="fa-solid fa-trash-can text-xs"></i>
-              <span>Hapus Terpilih (<span id="selectedCount">0</span>)</span>
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <div class="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
-        <div class="p-4 border-b border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-3">
-          <div>
-            <h3 class="text-sm font-bold text-white flex items-center gap-2">
-              <i class="fa-solid fa-list-check text-emerald-400"></i> Staging Transaksi Joki (CR Only)
-            </h3>
-            <p class="text-[11px] text-slate-400">Lakukan verifikasi. Hapus baris yang tidak diinginkan sebelum menekan Send Data.</p>
-          </div>
-
-          <button onclick="sendStagingToApi()" id="btnSendData" disabled
-            class="w-full sm:w-auto px-6 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold text-xs transition flex items-center justify-center gap-2 shadow-lg shadow-emerald-600/20">
-            <i class="fa-solid fa-paper-plane"></i>
-            <span>Send Data Joki ke Google Sheets</span>
+          <button onclick="deleteSelectedRows()" id="btnDeleteSelected" class="bg-rose-600/20 hover:bg-rose-600/30 text-rose-300 border border-rose-500/30 font-medium text-xs px-3 py-1.5 rounded-lg transition hidden flex items-center gap-1.5">
+            <i class="fa-solid fa-trash-can"></i> Hapus Pilihan (<span id="selectedCount">0</span>)
           </button>
         </div>
 
+        <div class="flex items-center gap-3 w-full md:w-auto justify-end">
+          <span class="text-xs text-slate-400" id="stagingCountInfo">Total: 0 Transaksi Joki</span>
+          <button onclick="sendDataToSheets()" id="btnSendData" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs px-5 py-2 rounded-lg transition shadow-lg shadow-emerald-600/20 flex items-center gap-2">
+            <i class="fa-solid fa-paper-plane"></i> Send Data ke Sheets
+          </button>
+        </div>
+      </div>
+
+      <!-- Tabel Staging -->
+      <div class="bg-slate-800/60 border border-slate-700/60 rounded-xl overflow-hidden shadow-xl">
         <div class="overflow-x-auto">
           <table class="w-full text-left text-xs text-slate-300">
-            <thead class="bg-slate-950/80 text-slate-400 uppercase text-[10px] tracking-wider border-b border-slate-800">
+            <thead class="bg-slate-900/80 text-slate-400 uppercase text-[10px] tracking-wider border-b border-slate-700/60">
               <tr>
                 <th class="p-3.5 text-center w-12">
-                  <input type="checkbox" id="selectAllCheckbox" onchange="toggleSelectAll(this)" class="w-5 h-5 rounded border-slate-700 bg-slate-900 text-blue-600 focus:ring-0 cursor-pointer" />
+                  <input type="checkbox" id="selectAllCheckbox" class="row-checkbox" onchange="toggleSelectAll(this.checked)" />
                 </th>
-                <th class="p-3.5">Tanggal</th>
+                <th class="p-3.5 whitespace-nowrap">Tanggal</th>
                 <th class="p-3.5">Keterangan Transaksi</th>
                 <th class="p-3.5">Tag Nama</th>
-                <th class="p-3.5 text-right">Nominal Joki</th>
-                <th class="p-3.5 text-right">Saldo</th>
+                <th class="p-3.5 text-right whitespace-nowrap">Nominal (CR)</th>
                 <th class="p-3.5 text-center w-20">Aksi</th>
               </tr>
             </thead>
-            <tbody id="stgTableBody" class="divide-y divide-slate-800/60">
+            <tbody id="stagingTableBody" class="divide-y divide-slate-700/40">
               <tr>
-                <td colspan="7" class="p-12 text-center text-slate-500">
-                  <i class="fa-solid fa-file-csv text-3xl mb-3 block text-slate-600"></i>
-                  Silakan upload file CSV mutasi BCA kamu di atas.
+                <td colspan="6" class="p-12 text-center text-slate-500">
+                  <i class="fa-solid fa-cloud-arrow-up text-3xl mb-3 block opacity-40"></i>
+                  Silakan unggah file CSV mutasi BCA untuk memulai staging data pendapatan Joki.
                 </td>
               </tr>
             </tbody>
@@ -225,232 +125,151 @@
       </div>
     </section>
 
-    <section id="tab-income" class="hidden space-y-6">
-      
-      <!-- Controls Header -->
-      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col md:flex-row items-center justify-between gap-4">
-        <div>
-          <h2 class="text-lg font-bold text-white flex items-center gap-2">
-            <i class="fa-solid fa-chart-line text-emerald-400"></i> Dashboard Pendapatan Joki
-          </h2>
-          <p class="text-xs text-slate-400">Analisis pemasukan hasil joki yang tersimpan di Google Sheets</p>
-        </div>
+    <!-- ========================================== -->
+    <!-- TAB 2: DASHBOARD PENDAPATAN JOKI           -->
+    <!-- ========================================== -->
+    <section id="tabDashboard" class="hidden space-y-6">
 
-        <div class="flex flex-wrap items-center gap-2.5 w-full md:w-auto">
-          <select id="incYearSelect" onchange="renderIncomeDashboard()" class="bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-blue-500">
-            <option value="ALL">Semua Tahun</option>
-          </select>
-
-          <select id="incMonthSelect" onchange="renderIncomeDashboard()" class="bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-blue-500">
-            <option value="ALL">Semua Bulan</option>
-            <option value="01">Januari</option>
-            <option value="02">Februari</option>
-            <option value="03">Maret</option>
-            <option value="04">April</option>
-            <option value="05">Mei</option>
-            <option value="06">Juni</option>
-            <option value="07">Juli</option>
-            <option value="08">Agustus</option>
-            <option value="09">September</option>
-            <option value="10">Oktober</option>
-            <option value="11">November</option>
-            <option value="12">Desember</option>
-          </select>
-
-          <button onclick="fetchDatabaseFromApi()" class="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-semibold text-xs flex items-center gap-2 transition shadow-md shadow-blue-600/20">
-            <i class="fa-solid fa-rotate-right" id="incRefreshIcon"></i>
-            <span>Sync Data</span>
-          </button>
-        </div>
+      <!-- Loading State -->
+      <div id="dashLoading" class="hidden py-16 text-center text-slate-400">
+        <i class="fa-solid fa-spinner fa-spin text-3xl text-blue-500 mb-3 block"></i>
+        <span>Memuat data pendapatan dari Google Sheets...</span>
       </div>
 
-      <!-- Metric Cards -->
-      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-sm">
-          <div class="flex items-center justify-between text-slate-400 text-xs font-medium">
-            <span>Hasil Joki Bulan Ini</span>
-            <i class="fa-regular fa-calendar-check text-emerald-400"></i>
+      <!-- Content Dashboard -->
+      <div id="dashContent" class="space-y-6">
+        
+        <!-- Key Metrics Cards -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div class="bg-slate-800/80 border border-slate-700/60 rounded-xl p-4 shadow-sm">
+            <span class="text-xs text-emerald-400 font-medium flex items-center gap-1.5"><i class="fa-solid fa-calendar-day"></i> Pendapatan Bulan Ini</span>
+            <div class="text-xl font-bold text-emerald-400 mt-2" id="dashThisMonth">Rp 0</div>
+            <p class="text-[10px] text-slate-400 mt-1" id="dashCompareMonth">vs Bulan Lalu: -</p>
           </div>
-          <div class="text-2xl font-bold text-emerald-400 mt-2" id="incMetricMonth">Rp 0</div>
-          <div class="text-[11px] mt-2 flex items-center gap-1.5" id="incMetricMonthGrowth">
-            <span class="text-slate-500">vs Bulan Lalu: -</span>
-          </div>
-        </div>
 
-        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-sm">
-          <div class="flex items-center justify-between text-slate-400 text-xs font-medium">
-            <span>Total Joki Tahun Ini</span>
-            <i class="fa-solid fa-trophy text-amber-400"></i>
+          <div class="bg-slate-800/80 border border-slate-700/60 rounded-xl p-4 shadow-sm">
+            <span class="text-xs text-blue-400 font-medium flex items-center gap-1.5"><i class="fa-solid fa-calendar-days"></i> Pendapatan Tahun Ini</span>
+            <div class="text-xl font-bold text-white mt-2" id="dashThisYear">Rp 0</div>
+            <p class="text-[10px] text-slate-400 mt-1" id="dashCompareYear">vs Tahun Lalu: -</p>
           </div>
-          <div class="text-2xl font-bold text-white mt-2" id="incMetricYear">Rp 0</div>
-          <div class="text-[11px] text-slate-400 mt-2">Berdasarkan filter aktif</div>
-        </div>
 
-        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-sm">
-          <div class="flex items-center justify-between text-slate-400 text-xs font-medium">
-            <span>Rata-Rata Bulanan</span>
-            <i class="fa-solid fa-calculator text-blue-400"></i>
+          <div class="bg-slate-800/80 border border-slate-700/60 rounded-xl p-4 shadow-sm">
+            <span class="text-xs text-yellow-400 font-medium flex items-center gap-1.5"><i class="fa-solid fa-chart-line"></i> Rata-rata Bulanan</span>
+            <div class="text-xl font-bold text-yellow-400 mt-2" id="dashAvgMonthly">Rp 0</div>
+            <p class="text-[10px] text-slate-400 mt-1">Berdasarkan data aktif</p>
           </div>
-          <div class="text-2xl font-bold text-blue-400 mt-2" id="incMetricAvg">Rp 0</div>
-          <div class="text-[11px] text-slate-400 mt-2">Rata-rata pendapatan per bulan</div>
-        </div>
-      </div>
 
-      <!-- Charts Row -->
-      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <!-- Line Chart (Trend YoY) -->
-        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-sm space-y-4">
-          <h3 class="text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center gap-2">
-            <i class="fa-solid fa-chart-line text-emerald-400"></i> Perbandingan Tren Pendapatan Joki (YoY)
-          </h3>
-          <div class="relative h-64 w-full">
-            <canvas id="incLineChart"></canvas>
+          <div class="bg-slate-800/80 border border-slate-700/60 rounded-xl p-4 shadow-sm">
+            <span class="text-xs text-slate-400 font-medium flex items-center gap-1.5"><i class="fa-solid fa-receipt"></i> Total Order Joki</span>
+            <div class="text-xl font-bold text-white mt-2" id="dashTotalTx">0</div>
+            <p class="text-[10px] text-slate-400 mt-1">Transaksi tersimpan di Sheets</p>
           </div>
         </div>
 
-        <!-- Bar Chart (Monthly Joki) -->
-        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-sm space-y-4">
-          <h3 class="text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center gap-2">
-            <i class="fa-solid fa-chart-column text-blue-400"></i> Chart Pendapatan Joki Per Bulan
-          </h3>
-          <div class="relative h-64 w-full">
-            <canvas id="incBarChart"></canvas>
+        <!-- Visualisasi Charts -->
+        <div class="bg-slate-800/80 border border-slate-700/60 rounded-xl p-5 shadow-sm space-y-3">
+          <div class="flex items-center justify-between border-b border-slate-700/60 pb-3">
+            <h3 class="text-xs font-bold text-slate-200 uppercase tracking-wider flex items-center gap-2">
+              <i class="fa-solid fa-chart-column text-blue-400"></i> Perbandingan Tren Pendapatan Joki Bulanan (YoY)
+            </h3>
+            <div class="flex items-center gap-2">
+              <select id="dashYearSelect" onchange="renderDashboardAnalytics()" class="bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1 text-xs text-white focus:outline-none">
+                <!-- Dropdown Tahun terisi otomatis -->
+              </select>
+            </div>
+          </div>
+          <div class="h-72 w-full pt-2">
+            <canvas id="jokiIncomeChart"></canvas>
           </div>
         </div>
-      </div>
 
-      <!-- Income Table -->
-      <div class="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-xl space-y-3">
-        <div class="p-4 border-b border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-3">
-          <h3 class="text-xs font-bold text-slate-300 uppercase tracking-wider">Riwayat Transaksi Joki Tersimpan</h3>
-          <input type="text" id="incTableSearch" oninput="renderIncomeDashboard()" placeholder="Cari di riwayat..."
-            class="bg-slate-950 border border-slate-800 rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none focus:border-blue-500 w-full sm:w-64" />
+        <!-- Tabel Transaksi Tersimpan -->
+        <div class="bg-slate-800/60 border border-slate-700/60 rounded-xl overflow-hidden shadow-xl space-y-3 p-4">
+          <div class="flex flex-col md:flex-row md:items-center justify-between gap-3">
+            <h3 class="text-xs font-bold text-slate-200 uppercase tracking-wider">
+              <i class="fa-solid fa-database text-emerald-400 me-1"></i> Data Transaksi Joki dari Google Sheets
+            </h3>
+            <div class="relative w-full md:w-64">
+              <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+              <input type="text" id="dashSearchInput" placeholder="Cari keterangan / nama..." oninput="renderDashboardTable()"
+                class="w-full bg-slate-900 border border-slate-700 rounded-lg pl-9 pr-3 py-1.5 text-xs text-white focus:outline-none focus:border-blue-500 transition" />
+            </div>
+          </div>
+
+          <div class="overflow-x-auto border border-slate-700/50 rounded-lg">
+            <table class="w-full text-left text-xs text-slate-300">
+              <thead class="bg-slate-900/80 text-slate-400 uppercase text-[10px] tracking-wider border-b border-slate-700/60">
+                <tr>
+                  <th class="p-3">Tanggal</th>
+                  <th class="p-3">Keterangan</th>
+                  <th class="p-3">Nama Pengirim</th>
+                  <th class="p-3 text-right">Nominal (CR)</th>
+                </tr>
+              </thead>
+              <tbody id="dashTableBody" class="divide-y divide-slate-700/40">
+                <tr>
+                  <td colspan="4" class="p-6 text-center text-slate-500">Memuat data...</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
         </div>
 
-        <div class="overflow-x-auto">
-          <table class="w-full text-left text-xs text-slate-300">
-            <thead class="bg-slate-950/80 text-slate-400 uppercase text-[10px] tracking-wider border-b border-slate-800">
-              <tr>
-                <th class="p-3.5">Tanggal</th>
-                <th class="p-3.5">Keterangan Mutasi</th>
-                <th class="p-3.5">Tag Nama</th>
-                <th class="p-3.5 text-right">Nominal Joki</th>
-              </tr>
-            </thead>
-            <tbody id="incTableBody" class="divide-y divide-slate-800/60">
-              <tr><td colspan="4" class="p-8 text-center text-slate-500">Klik "Sync Data" untuk mengambil database.</td></tr>
-            </tbody>
-          </table>
-        </div>
       </div>
     </section>
 
   </main>
 
-  <!-- MODAL: PASSWORD PROMPT -->
-  <div id="modalPassword" class="fixed inset-0 z-50 bg-slate-950/90 backdrop-blur-md flex items-center justify-center p-4 hidden">
-    <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-sm w-full p-6 shadow-2xl space-y-4 text-center">
-      <div class="w-12 h-12 bg-blue-600/20 text-blue-400 rounded-2xl flex items-center justify-center mx-auto">
-        <i class="fa-solid fa-lock text-xl"></i>
-      </div>
-      <div>
-        <h3 class="text-base font-bold text-white">Masukkan Password API</h3>
-        <p class="text-xs text-slate-400 mt-1">Otentikasi dengan Apps Script Google Sheets.</p>
-      </div>
-
-      <form onsubmit="savePasswordFromModal(event)" class="space-y-3">
-        <input type="password" id="inputPassModal" required placeholder="Password..."
-          class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-white text-center focus:outline-none focus:border-blue-500" />
-        <button type="submit" class="w-full py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs rounded-xl transition shadow-lg shadow-blue-600/20">
-          Simpan Password
-        </button>
-      </form>
-    </div>
-  </div>
-
+  <!-- Script Logika Frontend -->
   <script>
-    // Config Constants
-    const API_URL = "https://script.google.com/macros/s/AKfycbzzo019Sn-tFUhIFFT9Atpv-r7MMbcQEOG7kLL4dr2esQgPj3aaETQZrIaVMrNwBGE95w/exec";
-    const DEFAULT_PASS = "ikmalsayang";
+    // Configuration & State
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzzo019Sn-tFUhIFFT9Atpv-r7MMbcQEOG7kLL4dr2esQgPj3aaETQZrIaVMrNwBGE95w/exec";
+    let currentPassword = localStorage.getItem("bca_joki_pass") || "ikmalsayang";
 
-    let apiPassword = localStorage.getItem("bca_api_password") || DEFAULT_PASS;
-    
-    // State Management
-    let stagingRawTx = [];
-    let stagingDetectedNames = new Set();
-    let selectedTxIds = new Set();
-    let stagingAccountMeta = { noRek: '', nama: '' };
+    let stagingTransactions = [];
+    let dbMonthlyData = {};
+    let incomeChartInstance = null;
 
-    let dbData = { monthlyData: {} };
+    // Initialize App
+    document.addEventListener("DOMContentLoaded", () => {
+      // Prompt set initial password if missing
+      if (!currentPassword) {
+        promptChangePassword();
+      }
+    });
 
-    // Chart Instances
-    let incLineChartInstance = null;
-    let incBarChartInstance = null;
+    function promptChangePassword() {
+      const pass = prompt("Masukkan Password API Google Apps Script:", currentPassword || "ikmalsayang");
+      if (pass !== null && pass.trim() !== "") {
+        currentPassword = pass.trim();
+        localStorage.setItem("bca_joki_pass", currentPassword);
+        alert("Password berhasil disimpan secara lokal!");
+      }
+    }
 
-    window.onload = function() {
-      localStorage.setItem("bca_api_password", apiPassword);
-      fetchDatabaseFromApi();
-    };
-
-    // ==========================================
-    // TAB NAVIGATION
-    // ==========================================
     function switchTab(tab) {
-      ['staging', 'income'].forEach(t => {
-        const sec = document.getElementById(`tab-${t}`);
-        const nav = document.getElementById(`nav-${t}`);
-        const navM = document.getElementById(`nav-${t}-m`);
+      const btnStaging = document.getElementById("tabBtnStaging");
+      const btnDash = document.getElementById("tabBtnDashboard");
+      const tabStaging = document.getElementById("tabStaging");
+      const tabDashboard = document.getElementById("tabDashboard");
 
-        if (t === tab) {
-          sec.classList.remove('hidden');
-          if (nav) nav.className = "px-4 py-2 rounded-xl text-xs font-semibold flex items-center space-x-2 transition bg-blue-600 text-white shadow-md shadow-blue-600/20";
-          if (navM) navM.className = "flex-1 px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center justify-center space-x-1.5 bg-blue-600 text-white";
-        } else {
-          sec.classList.add('hidden');
-          if (nav) nav.className = "px-4 py-2 rounded-xl text-xs font-semibold flex items-center space-x-2 text-slate-400 hover:text-slate-200 hover:bg-slate-800 transition";
-          if (navM) navM.className = "flex-1 px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center justify-center space-x-1.5 text-slate-400 hover:bg-slate-800";
-        }
-      });
+      if (tab === "staging") {
+        btnStaging.className = "px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-blue-600 text-white shadow-lg transition flex items-center gap-1.5";
+        btnDash.className = "px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-slate-700 text-slate-300 hover:bg-slate-600 transition flex items-center gap-1.5";
+        tabStaging.classList.remove("hidden");
+        tabDashboard.classList.add("hidden");
+      } else {
+        btnDash.className = "px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-blue-600 text-white shadow-lg transition flex items-center gap-1.5";
+        btnStaging.className = "px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-slate-700 text-slate-300 hover:bg-slate-600 transition flex items-center gap-1.5";
+        tabDashboard.classList.remove("hidden");
+        tabStaging.classList.add("hidden");
 
-      if (tab === 'income') renderIncomeDashboard();
-    }
-
-    // ==========================================
-    // AUTH / PASSWORD PROMPT
-    // ==========================================
-    function promptPassword(force = false) {
-      if (force || !apiPassword) {
-        document.getElementById('inputPassModal').value = apiPassword;
-        document.getElementById('modalPassword').classList.remove('hidden');
+        loadDashboardData();
       }
     }
 
-    function savePasswordFromModal(e) {
-      e.preventDefault();
-      const val = document.getElementById('inputPassModal').value.trim();
-      if (val) {
-        apiPassword = val;
-        localStorage.setItem("bca_api_password", apiPassword);
-        document.getElementById('modalPassword').classList.add('hidden');
-        fetchDatabaseFromApi();
-      }
-    }
-
-    // ==========================================
-    // TAB 1: STAGING & CSV PARSER (CR ONLY)
-    // ==========================================
-    function handleFileUpload(e) {
-      const file = e.target.files[0];
-      if (!file) return;
-
-      const reader = new FileReader();
-      reader.onload = function(evt) {
-        parseBCACSV(evt.target.result);
-      };
-      reader.readAsText(file);
-    }
-
-    function extractNameFromKet(ket) {
+    // Helper: Ekstraksi Nama
+    function extractName(ket) {
       let match = ket.match(/BI-FAST.*?DR\s+\d+\s+([A-Z\s]+)$/i);
       if (match) return match[1].trim();
 
@@ -465,30 +284,39 @@
         const name = match[1].trim();
         if (name.length > 3 && !['INDONESIA', 'REGUL'].includes(name)) return name;
       }
-
       return 'Lainnya';
     }
 
-    function parseBCACSV(text) {
-      stagingRawTx = [];
-      stagingDetectedNames.clear();
-      selectedTxIds.clear();
-      stagingAccountMeta = { noRek: '', nama: '' };
+    // Format Currency
+    function formatCurrency(val, hideDecimals) {
+      return new Intl.NumberFormat('id-ID', {
+        style: 'currency',
+        currency: 'IDR',
+        minimumFractionDigits: hideDecimals ? 0 : 2,
+        maximumFractionDigits: hideDecimals ? 0 : 2
+      }).format(val);
+    }
 
+    // File Upload & Parsing (Filter CR Only)
+    function handleFileUpload(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        parseBCACSVText(e.target.result);
+      };
+      reader.readAsText(file);
+    }
+
+    function parseBCACSVText(text) {
+      stagingTransactions = [];
       const lines = text.split(/\r?\n/);
 
       lines.forEach((line, idx) => {
         if (!line.trim()) return;
 
-        if (line.includes('No. Rekening')) {
-          const parts = line.split(',');
-          if (parts[2]) stagingAccountMeta.noRek = parts[2].replace(/'/g, '').trim();
-        }
-        if (line.includes('Nama')) {
-          const parts = line.split(',');
-          if (parts[2]) stagingAccountMeta.nama = parts[2].replace(/'/g, '').trim();
-        }
-
+        // Pattern matching for date 'DD/MM/YYYY or 'PEND
         const dateMatch = line.match(/^'(\d{2}\/\d{2}\/\d{4}|PEND),/);
         if (dateMatch) {
           const tanggal = dateMatch[1];
@@ -500,173 +328,78 @@
             const saldo = parseFloat(parts[parts.length - 1]) || 0;
             const amount = parseFloat(parts[parts.length - 3]) || 0;
             const keterangan = parts.slice(0, parts.length - 3).join(',').replace(/^'/, '').trim();
-            const tagNama = extractNameFromKet(keterangan);
-            const txId = `${tanggal}_${amount}_${idx}`;
-
-            // KONSENTRASI HANYA PADA CR (PENDAPATAN)
+            const tagNama = extractName(keterangan);
+            
+            // HANYA TERIMA TRANSAKSI KREDIT (CR)
             if (type === 'CR') {
-              if (tagNama) stagingDetectedNames.add(tagNama);
-              stagingRawTx.push({
+              const txId = `JOKI_${tanggal}_${amount}_${idx}`;
+              stagingTransactions.push({
                 id: txId,
                 tanggal,
                 keterangan,
                 tagNama,
-                category: 'Joki',
-                amount,
                 type: 'CR',
-                saldo
+                amount,
+                saldo,
+                selected: false
               });
             }
           }
         }
       });
 
-      populateStagingNameSelect();
-      renderStaging();
-      document.getElementById('btnSendData').disabled = stagingRawTx.length === 0;
-      document.getElementById('btnPurgeNonJoki').disabled = stagingRawTx.length === 0;
+      renderStagingTable();
     }
 
-    function populateStagingNameSelect() {
-      const select = document.getElementById('stgFilterNameSelect');
-      select.innerHTML = '<option value="ALL">-- Semua Tag Nama --</option>';
+    function renderStagingTable() {
+      const tbody = document.getElementById("stagingTableBody");
+      const actionsBar = document.getElementById("stagingActionsBar");
+      const hideDecimals = document.getElementById("hideDecimals").checked;
 
-      const sorted = Array.from(stagingDetectedNames).sort();
-      sorted.forEach(name => {
-        const opt = document.createElement('option');
-        opt.value = name;
-        opt.textContent = name;
-        select.appendChild(opt);
-      });
-    }
-
-    function deleteSingleRow(txId) {
-      stagingRawTx = stagingRawTx.filter(t => t.id !== txId);
-      selectedTxIds.delete(txId);
-      renderStaging();
-    }
-
-    function toggleSelectRow(txId, isChecked) {
-      if (isChecked) selectedTxIds.add(txId);
-      else selectedTxIds.delete(txId);
-      updateSelectionUI();
-      renderStaging(); // Re-render to apply active row highlights
-    }
-
-    function toggleSelectAll(masterCheckbox) {
-      const visibleTx = getFilteredStagingTx();
-      visibleTx.forEach(tx => {
-        if (masterCheckbox.checked) selectedTxIds.add(tx.id);
-        else selectedTxIds.delete(tx.id);
-      });
-      renderStaging();
-    }
-
-    function updateSelectionUI() {
-      const count = selectedTxIds.size;
-      document.getElementById('selectedCount').textContent = count;
-      document.getElementById('btnDeleteSelected').disabled = count === 0;
-    }
-
-    function deleteSelectedRows() {
-      if (selectedTxIds.size === 0) return;
-      if (confirm(`Yakin ingin menghapus ${selectedTxIds.size} baris transaksi terpilih?`)) {
-        stagingRawTx = stagingRawTx.filter(t => !selectedTxIds.has(t.id));
-        selectedTxIds.clear();
-        renderStaging();
-      }
-    }
-
-    function autoPurgeNonJoki() {
-      const initialCount = stagingRawTx.length;
-      stagingRawTx = stagingRawTx.filter(tx => 
-        tx.keterangan.toUpperCase().includes('JOKI') || 
-        tx.tagNama.toUpperCase().includes('JOKI')
-      );
-      const purgedCount = initialCount - stagingRawTx.length;
-      selectedTxIds.clear();
-      renderStaging();
-      alert(`Berhasil menghapus ${purgedCount} baris transaksi yang bukan "JOKI".`);
-    }
-
-    function formatRp(val, hideDecimals) {
-      return new Intl.NumberFormat('id-ID', {
-        style: 'currency',
-        currency: 'IDR',
-        minimumFractionDigits: hideDecimals ? 0 : 2,
-        maximumFractionDigits: hideDecimals ? 0 : 2
-      }).format(val);
-    }
-
-    function getFilteredStagingTx() {
-      const searchQuery = document.getElementById('stgSearchInput').value.toLowerCase();
-      const selectedName = document.getElementById('stgFilterNameSelect').value;
-
-      return stagingRawTx.filter(tx => {
-        const matchesSearch = tx.keterangan.toLowerCase().includes(searchQuery) || tx.tanggal.includes(searchQuery);
-        const matchesName = selectedName === 'ALL' || tx.tagNama === selectedName;
-        return matchesSearch && matchesName;
-      });
-    }
-
-    function renderStaging() {
-      const hideDecimals = document.getElementById('hideDecimals').checked;
-      const filtered = getFilteredStagingTx();
-
-      if (stagingAccountMeta.noRek) {
-        document.getElementById('stgAccountInfo').textContent = `Rekening: ${stagingAccountMeta.noRek} a.n ${stagingAccountMeta.nama}`;
-      }
-
-      const sumCR = filtered.reduce((acc, t) => acc + t.amount, 0);
-
-      document.getElementById('stgTotalCR').textContent = formatRp(sumCR, hideDecimals);
-      document.getElementById('stgCountCR').textContent = `${filtered.length} transaksi joki masuk`;
-      document.getElementById('stgTotalTx').textContent = filtered.length;
-
-      document.getElementById('btnSendData').disabled = stagingRawTx.length === 0;
-      document.getElementById('btnPurgeNonJoki').disabled = stagingRawTx.length === 0;
-
-      const tbody = document.getElementById('stgTableBody');
-      if (filtered.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="7" class="p-12 text-center text-slate-500"><i class="fa-solid fa-file-csv text-3xl mb-3 block text-slate-600"></i>Tidak ada transaksi staging joki yang sesuai.</td></tr>`;
-        updateSelectionUI();
+      if (stagingTransactions.length === 0) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="6" class="p-12 text-center text-slate-500">
+              <i class="fa-solid fa-cloud-arrow-up text-3xl mb-3 block opacity-40"></i>
+              Tidak ada data staging. Silakan unggah file CSV mutasi BCA.
+            </td>
+          </tr>
+        `;
+        actionsBar.classList.add("hidden");
         return;
       }
 
-      tbody.innerHTML = filtered.map(tx => {
-        const isChecked = selectedTxIds.has(tx.id);
-        const isPEND = tx.tanggal === 'PEND';
+      actionsBar.classList.remove("hidden");
+      document.getElementById("stagingCountInfo").textContent = `Total: ${stagingTransactions.length} Transaksi Joki`;
 
+      tbody.innerHTML = stagingTransactions.map((tx, idx) => {
+        const isPEND = tx.tanggal === 'PEND';
         const dateDisplay = isPEND 
           ? `<span class="bg-amber-500/20 text-amber-300 border border-amber-500/30 px-2 py-0.5 rounded text-[10px] font-bold"><i class="fa-regular fa-clock me-1"></i>PENDING</span>` 
           : tx.tanggal;
 
-        // Highlight selected row with distinct background & left accent border
-        const rowBgClass = isChecked 
-          ? 'bg-blue-900/40 border-l-4 border-blue-500 font-medium' 
-          : 'hover:bg-slate-800/40';
+        // Styling untuk baris yang dicentang
+        const rowBgClass = tx.selected 
+          ? "bg-blue-900/40 border-l-4 border-blue-500 font-medium" 
+          : "hover:bg-slate-750 transition";
 
         return `
-          <tr class="${rowBgClass} transition">
+          <tr class="${rowBgClass}">
             <td class="p-3.5 text-center">
-              <input type="checkbox" onchange="toggleSelectRow('${tx.id}', this.checked)" ${isChecked ? 'checked' : ''} class="w-5 h-5 rounded border-slate-700 bg-slate-900 text-blue-600 focus:ring-0 cursor-pointer" />
+              <input type="checkbox" class="row-checkbox" ${tx.selected ? 'checked' : ''} onchange="toggleRowSelect(${idx}, this.checked)" />
             </td>
-            <td class="p-3.5 whitespace-nowrap text-slate-300">${dateDisplay}</td>
+            <td class="p-3.5 whitespace-nowrap text-slate-400">${dateDisplay}</td>
             <td class="p-3.5 max-w-xs break-words font-mono text-[11px] text-slate-300">${tx.keterangan}</td>
             <td class="p-3.5 whitespace-nowrap">
-              <span class="bg-blue-500/10 text-blue-400 border border-blue-500/20 px-2 py-0.5 rounded-lg text-[10px] font-medium">
+              <span class="bg-blue-500/10 text-blue-400 border border-blue-500/20 px-2 py-0.5 rounded text-[10px] font-medium">
                 <i class="fa-solid fa-user text-[9px] me-1"></i>${tx.tagNama}
               </span>
             </td>
-            <td class="p-3.5 text-right whitespace-nowrap font-semibold text-emerald-400">
-              +${formatRp(tx.amount, hideDecimals)}
-            </td>
-            <td class="p-3.5 text-right whitespace-nowrap text-slate-400">
-              ${formatRp(tx.saldo, hideDecimals)}
+            <td class="p-3.5 text-right whitespace-nowrap text-emerald-400 font-semibold">
+              +${formatCurrency(tx.amount, hideDecimals)}
             </td>
             <td class="p-3.5 text-center whitespace-nowrap">
-              <button onclick="deleteSingleRow('${tx.id}')" title="Hapus baris ini"
-                class="p-1.5 text-rose-400 hover:text-white hover:bg-rose-500/20 rounded-lg transition">
+              <button onclick="deleteRow(${idx})" class="text-rose-400 hover:text-rose-300 p-1.5 rounded hover:bg-rose-500/10 transition" title="Hapus Baris Ini">
                 <i class="fa-solid fa-trash-can"></i>
               </button>
             </td>
@@ -677,295 +410,299 @@
       updateSelectionUI();
     }
 
-    function updateStatusBadge(text, type = 'success') {
-      const statusText = document.getElementById('apiStatusText');
-      const statusDot = document.getElementById('statusDot');
-      const statusBadge = document.getElementById('statusBadge');
+    function toggleRowSelect(idx, isChecked) {
+      stagingTransactions[idx].selected = isChecked;
+      renderStagingTable();
+    }
 
-      if (statusText) statusText.textContent = text;
-      
-      if (type === 'success') {
-        statusBadge.className = "hidden sm:flex items-center space-x-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[11px] font-medium";
-        statusDot.className = "w-2 h-2 rounded-full bg-emerald-500 animate-pulse";
-      } else if (type === 'syncing') {
-        statusBadge.className = "hidden sm:flex items-center space-x-2 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 text-[11px] font-medium";
-        statusDot.className = "w-2 h-2 rounded-full bg-blue-500 animate-ping";
+    function toggleSelectAll(isChecked) {
+      stagingTransactions.forEach(tx => tx.selected = isChecked);
+      renderStagingTable();
+    }
+
+    function updateSelectionUI() {
+      const selectedCount = stagingTransactions.filter(t => t.selected).length;
+      const btnDeleteSelected = document.getElementById("btnDeleteSelected");
+      const selectedCountSpan = document.getElementById("selectedCount");
+
+      if (selectedCount > 0) {
+        btnDeleteSelected.classList.remove("hidden");
+        selectedCountSpan.textContent = selectedCount;
       } else {
-        statusBadge.className = "hidden sm:flex items-center space-x-2 px-3 py-1 rounded-full bg-rose-500/10 border border-rose-500/20 text-rose-400 text-[11px] font-medium";
-        statusDot.className = "w-2 h-2 rounded-full bg-rose-500";
+        btnDeleteSelected.classList.add("hidden");
       }
     }
 
-    function sendStagingToApi() {
-      if (stagingRawTx.length === 0) {
-        alert("Tidak ada data transaksi joki untuk dikirim.");
-        return;
+    function deleteRow(idx) {
+      stagingTransactions.splice(idx, 1);
+      renderStagingTable();
+    }
+
+    function deleteSelectedRows() {
+      if (confirm("Apakah kamu yakin ingin menghapus baris transaksi yang dicentang?")) {
+        stagingTransactions = stagingTransactions.filter(t => !t.selected);
+        renderStagingTable();
       }
+    }
+
+    // Auto-filter selain keyword "JOKI"
+    function autoFilterNonJoki() {
+      const initialCount = stagingTransactions.length;
+      stagingTransactions = stagingTransactions.filter(tx => {
+        const ket = tx.keterangan.toUpperCase();
+        return ket.includes("JOKI");
+      });
+      const deletedCount = initialCount - stagingTransactions.length;
+      alert(`Berhasil menghapus ${deletedCount} transaksi yang bukan berisikan keyword JOKI.`);
+      renderStagingTable();
+    }
+
+    // Send Data ke Google Sheets (Tipe Content-Type: text/plain untuk bypass CORS)
+    async function sendDataToSheets() {
+      if (stagingTransactions.length === 0) return;
 
       const btn = document.getElementById('btnSendData');
       btn.disabled = true;
-      btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i><span>Sending Joki Data...</span>`;
-      updateStatusBadge("Sending Data...", "syncing");
+      btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin me-1.5"></i> Mengirim...`;
 
-      // Use text/plain header to bypass pre-flight CORS restrictions with Google Apps Script
-      fetch(API_URL, {
-        method: 'POST',
-        mode: 'cors',
-        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-        body: JSON.stringify({
-          password: apiPassword,
-          data: stagingRawTx
-        })
-      })
-      .then(res => {
-        if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
-        return res.json();
-      })
-      .then(res => {
-        btn.disabled = false;
-        btn.innerHTML = `<i class="fa-solid fa-paper-plane"></i><span>Send Data Joki ke Google Sheets</span>`;
+      try {
+        const payload = {
+          password: currentPassword,
+          data: stagingTransactions
+        };
 
-        if (res.status === 'success') {
-          updateStatusBadge("Data Saved!", "success");
-          alert('Berhasil! Data pendapatan joki berhasil disimpan ke Google Sheets.');
-          stagingRawTx = [];
-          selectedTxIds.clear();
-          renderStaging();
-          fetchDatabaseFromApi();
+        const response = await fetch(SCRIPT_URL, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'text/plain;charset=utf-8'
+          },
+          body: JSON.stringify(payload)
+        });
+
+        const result = await response.json();
+
+        if (result.status === 'success') {
+          alert('Data pendapatan Joki berhasil disimpan ke Google Sheets!');
+          stagingTransactions = [];
+          renderStagingTable();
+          switchTab('dashboard');
         } else {
-          updateStatusBadge("Auth Error", "error");
-          alert('Gagal mengirim data: ' + res.message);
-          if (res.message && res.message.includes('Password')) promptPassword(true);
+          alert('Gagal menyimpan: ' + result.message);
         }
-      })
-      .catch(err => {
+      } catch (err) {
+        console.error(err);
+        alert('Koneksi Gagal! Pastikan URL Apps Script benar dan di-deploy sebagai Web App dengan akses "Anyone".');
+      } finally {
         btn.disabled = false;
-        btn.innerHTML = `<i class="fa-solid fa-paper-plane"></i><span>Send Data Joki ke Google Sheets</span>`;
-        updateStatusBadge("Send Failed", "error");
-        console.error("POST Error:", err);
-        alert('Koneksi Gagal: ' + err.toString() + '\n\nPastikan Deployment Apps Script di-set "Anyone".');
-      });
+        btn.innerHTML = `<i class="fa-solid fa-paper-plane me-1.5"></i> Send Data ke Sheets`;
+      }
     }
 
-    // ==========================================
-    // API SYNC & DASHBOARD
-    // ==========================================
-    function fetchDatabaseFromApi() {
-      updateStatusBadge("Syncing...", "syncing");
+    // Dashboard Data Fetching & Analytics
+    async function loadDashboardData() {
+      const loadingElem = document.getElementById('dashLoading');
+      const contentElem = document.getElementById('dashContent');
 
-      const fetchUrl = `${API_URL}?password=${encodeURIComponent(apiPassword)}`;
+      loadingElem.classList.remove('hidden');
+      contentElem.classList.add('hidden');
 
-      fetch(fetchUrl, {
-        method: 'GET',
-        mode: 'cors',
-        redirect: 'follow'
-      })
-      .then(res => {
-        if (!res.ok) throw new Error(`Network response error: ${res.status}`);
-        return res.json();
-      })
-      .then(res => {
-        if (res.status === 'success') {
-          updateStatusBadge("Apps Script Ready", "success");
-          dbData = res.data;
-          populateYearOptions();
-          renderIncomeDashboard();
+      try {
+        const url = `${SCRIPT_URL}?password=${encodeURIComponent(currentPassword)}`;
+        const response = await fetch(url);
+        const result = await response.json();
+
+        if (result.status === 'success') {
+          dbMonthlyData = result.data.monthlyData || {};
+          populateYearSelect();
+          renderDashboardAnalytics();
+          loadingElem.classList.add('hidden');
+          contentElem.classList.remove('hidden');
         } else {
-          updateStatusBadge("Auth Failed", "error");
-          if (res.message && res.message.includes('Password')) promptPassword(true);
+          alert('Gagal memuat data: ' + result.message);
         }
-      })
-      .catch(err => {
-        updateStatusBadge("Connection Failed", "error");
-        console.error("GET Fetch Error:", err);
-      });
+      } catch (err) {
+        console.error(err);
+        alert('Gagal terhubung ke Google Sheets. Pastikan Password API dan koneksi internet kamu sesuai.');
+      }
     }
 
-    function populateYearOptions() {
+    function populateYearSelect() {
+      const yearSelect = document.getElementById('dashYearSelect');
+      yearSelect.innerHTML = '';
+
       const years = new Set();
-      Object.keys(dbData.monthlyData || {}).forEach(key => {
+      Object.keys(dbMonthlyData).forEach(key => {
         const y = key.split('-')[0];
         if (y) years.add(y);
       });
 
-      const incYearSelect = document.getElementById('incYearSelect');
+      const currentYear = new Date().getFullYear().toString();
+      years.add(currentYear);
+
       const sortedYears = Array.from(years).sort().reverse();
-      
-      const currentVal = incYearSelect.value;
-      incYearSelect.innerHTML = '<option value="ALL">Semua Tahun</option>';
       sortedYears.forEach(y => {
         const opt = document.createElement('option');
         opt.value = y;
-        opt.textContent = y;
-        incYearSelect.appendChild(opt);
+        opt.textContent = `Tahun ${y}`;
+        yearSelect.appendChild(opt);
       });
-      incYearSelect.value = currentVal;
     }
 
-    // ==========================================
-    // TAB 2: DASHBOARD PENDAPATAN JOKI
-    // ==========================================
-    function renderIncomeDashboard() {
-      const selectedYear = document.getElementById('incYearSelect').value;
-      const selectedMonth = document.getElementById('incMonthSelect').value;
-      const searchQuery = document.getElementById('incTableSearch').value.toLowerCase();
+    function renderDashboardAnalytics() {
+      const selectedYear = document.getElementById('dashYearSelect').value || new Date().getFullYear().toString();
+      const hideDecimals = true;
 
-      let allIncomeTx = [];
-      const monthlyTotals = {};
-
-      Object.keys(dbData.monthlyData || {}).forEach(sheetKey => {
-        const [y, m] = sheetKey.split('-');
-
-        if (selectedYear !== 'ALL' && y !== selectedYear) return;
-        if (selectedMonth !== 'ALL' && m !== selectedMonth) return;
-
-        const txList = dbData.monthlyData[sheetKey] || [];
-        txList.forEach(tx => {
-          if (tx.type === 'CR') {
-            allIncomeTx.push(tx);
-
-            if (!monthlyTotals[sheetKey]) monthlyTotals[sheetKey] = 0;
-            monthlyTotals[sheetKey] += tx.amount;
-          }
-        });
-      });
-
-      // Filtered Table Transaksi
-      const filteredTable = allIncomeTx.filter(tx => 
-        tx.keterangan.toLowerCase().includes(searchQuery) ||
-        tx.tagNama.toLowerCase().includes(searchQuery)
-      );
-
-      // Render Table
-      const tbody = document.getElementById('incTableBody');
-      if (filteredTable.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="4" class="p-8 text-center text-slate-500">Tidak ada riwayat pendapatan joki ditemukan.</td></tr>`;
-      } else {
-        tbody.innerHTML = filteredTable.map(tx => `
-          <tr class="hover:bg-slate-800/40 transition">
-            <td class="p-3.5 text-slate-400 whitespace-nowrap">${tx.tanggal}</td>
-            <td class="p-3.5 max-w-xs break-words font-mono text-[11px] text-slate-300">${tx.keterangan}</td>
-            <td class="p-3.5 whitespace-nowrap"><span class="bg-blue-500/10 text-blue-400 px-2 py-0.5 rounded text-[10px]"><i class="fa-solid fa-user me-1 text-[9px]"></i>${tx.tagNama}</span></td>
-            <td class="p-3.5 text-right font-semibold text-emerald-400 whitespace-nowrap">+${formatRp(tx.amount, true)}</td>
-          </tr>
-        `).join('');
-      }
-
-      // Calculations for Metric Cards
-      const totalIncome = allIncomeTx.reduce((acc, t) => acc + t.amount, 0);
-      document.getElementById('incMetricYear').textContent = formatRp(totalIncome, true);
-
-      // Current Month Income Comparison
       const now = new Date();
-      const curY = now.getFullYear().toString();
-      const curM = String(now.getMonth() + 1).padStart(2, "0");
-      const prevMNum = now.getMonth() === 0 ? 12 : now.getMonth();
-      const prevYNum = now.getMonth() === 0 ? now.getFullYear() - 1 : now.getFullYear();
-      const prevM = String(prevMNum).padStart(2, "0");
+      const currYear = now.getFullYear().toString();
+      const currMonthNum = String(now.getMonth() + 1).padStart(2, '0');
+      const prevMonthNum = String(now.getMonth() === 0 ? 12 : now.getMonth()).padStart(2, '0');
+      const prevYearForMonth = now.getMonth() === 0 ? (now.getFullYear() - 1).toString() : currYear;
 
-      const curKey = `${curY}-${curM}`;
-      const prevKey = `${prevYNum}-${prevM}`;
+      const currMonthKey = `${currYear}-${currMonthNum}`;
+      const prevMonthKey = `${prevYearForMonth}-${prevMonthNum}`;
+      const prevYearStr = (parseInt(selectedYear) - 1).toString();
 
-      const curMonthSum = (dbData.monthlyData[curKey] || []).filter(t => t.type === 'CR').reduce((a, b) => a + b.amount, 0);
-      const prevMonthSum = (dbData.monthlyData[prevKey] || []).filter(t => t.type === 'CR').reduce((a, b) => a + b.amount, 0);
+      let thisMonthTotal = 0;
+      let lastMonthTotal = 0;
+      let thisYearTotal = 0;
+      let lastYearTotal = 0;
+      let totalTxCount = 0;
+      let activeMonthsCount = 0;
 
-      document.getElementById('incMetricMonth').textContent = formatRp(curMonthSum, true);
+      const monthlyChartDataCurr = Array(12).fill(0);
+      const monthlyChartDataPrev = Array(12).fill(0);
 
-      const growthElem = document.getElementById('incMetricMonthGrowth');
-      if (prevMonthSum > 0) {
-        const pct = ((curMonthSum - prevMonthSum) / prevMonthSum) * 100;
-        const isPos = pct >= 0;
-        growthElem.innerHTML = `<span class="${isPos ? 'text-emerald-400' : 'text-rose-400'} font-bold">${isPos ? '+' : ''}${pct.toFixed(1)}%</span> <span class="text-slate-500">vs bulan lalu (${formatRp(prevMonthSum, true)})</span>`;
-      } else {
-        growthElem.innerHTML = `<span class="text-slate-500">vs Bulan Lalu: ${formatRp(prevMonthSum, true)}</span>`;
-      }
+      Object.keys(dbMonthlyData).forEach(key => {
+        const [y, m] = key.split('-');
+        const txList = dbMonthlyData[key] || [];
+        const monthIndex = parseInt(m) - 1;
 
-      const activeMonthsCount = Object.keys(monthlyTotals).length || 1;
-      document.getElementById('incMetricAvg').textContent = formatRp(totalIncome / activeMonthsCount, true);
+        const sum = txList.reduce((acc, t) => acc + (t.amount || 0), 0);
+        totalTxCount += txList.length;
 
-      // Render Charts
-      renderIncomeCharts(selectedYear);
+        if (key === currMonthKey) thisMonthTotal = sum;
+        if (key === prevMonthKey) lastMonthTotal = sum;
+
+        if (y === selectedYear) {
+          thisYearTotal += sum;
+          if (monthIndex >= 0 && monthIndex < 12) monthlyChartDataCurr[monthIndex] = sum;
+          if (sum > 0) activeMonthsCount++;
+        }
+
+        if (y === prevYearStr) {
+          lastYearTotal += sum;
+          if (monthIndex >= 0 && monthIndex < 12) monthlyChartDataPrev[monthIndex] = sum;
+        }
+      });
+
+      // Update Summary UI
+      document.getElementById('dashThisMonth').textContent = formatCurrency(thisMonthTotal, hideDecimals);
+      
+      const monthDiff = thisMonthTotal - lastMonthTotal;
+      document.getElementById('dashCompareMonth').textContent = `vs Bulan Lalu: ${monthDiff >= 0 ? '+' : ''}${formatCurrency(monthDiff, hideDecimals)}`;
+
+      document.getElementById('dashThisYear').textContent = formatCurrency(thisYearTotal, hideDecimals);
+      const yearDiff = thisYearTotal - lastYearTotal;
+      document.getElementById('dashCompareYear').textContent = `vs ${prevYearStr}: ${yearDiff >= 0 ? '+' : ''}${formatCurrency(yearDiff, hideDecimals)}`;
+
+      const avg = activeMonthsCount > 0 ? (thisYearTotal / activeMonthsCount) : 0;
+      document.getElementById('dashAvgMonthly').textContent = formatCurrency(avg, hideDecimals);
+
+      document.getElementById('dashTotalTx').textContent = totalTxCount;
+
+      // Render Chart
+      renderChart(selectedYear, prevYearStr, monthlyChartDataCurr, monthlyChartDataPrev);
+      renderDashboardTable();
     }
 
-    function renderIncomeCharts(selectedYear) {
-      const months = ['01','02','03','04','05','06','07','08','09','10','11','12'];
-      const monthNames = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
-      
-      const targetYear = selectedYear === 'ALL' ? new Date().getFullYear().toString() : selectedYear;
-      const prevYear = (parseInt(targetYear) - 1).toString();
+    function renderChart(selectedYear, prevYearStr, dataCurr, dataPrev) {
+      const ctx = document.getElementById('jokiIncomeChart').getContext('2d');
+      const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
 
-      const currentYearData = months.map(m => {
-        const key = `${targetYear}-${m}`;
-        return (dbData.monthlyData[key] || []).filter(t => t.type === 'CR').reduce((a, b) => a + b.amount, 0);
-      });
+      if (incomeChartInstance) {
+        incomeChartInstance.destroy();
+      }
 
-      const prevYearData = months.map(m => {
-        const key = `${prevYear}-${m}`;
-        return (dbData.monthlyData[key] || []).filter(t => t.type === 'CR').reduce((a, b) => a + b.amount, 0);
-      });
-
-      // Line Chart (YoY)
-      const lineCtx = document.getElementById('incLineChart').getContext('2d');
-      if (incLineChartInstance) incLineChartInstance.destroy();
-
-      incLineChartInstance = new Chart(lineCtx, {
+      incomeChartInstance = new Chart(ctx, {
         type: 'line',
         data: {
           labels: monthNames,
           datasets: [
             {
-              label: `Tahun ${targetYear}`,
-              data: currentYearData,
-              borderColor: '#10b981',
-              backgroundColor: 'rgba(16, 185, 129, 0.15)',
+              label: `Tahun ${selectedYear}`,
+              data: dataCurr,
+              borderColor: '#3b82f6',
+              backgroundColor: 'rgba(59, 130, 246, 0.15)',
               fill: true,
-              tension: 0.3
+              tension: 0.3,
+              borderWidth: 3
             },
             {
-              label: `Tahun ${prevYear}`,
-              data: prevYearData,
+              label: `Tahun ${prevYearStr}`,
+              data: dataPrev,
               borderColor: '#64748b',
-              borderDash: [4, 4],
-              tension: 0.3
+              borderDash: [5, 5],
+              fill: false,
+              tension: 0.3,
+              borderWidth: 2
             }
           ]
         },
         options: {
           responsive: true,
           maintainAspectRatio: false,
-          plugins: { legend: { labels: { color: '#94a3b8', font: { size: 10 } } } },
+          plugins: {
+            legend: { labels: { color: '#94a3b8', font: { size: 11 } } },
+            tooltip: {
+              callbacks: {
+                label: function(context) {
+                  return context.dataset.label + ': ' + formatCurrency(context.raw, true);
+                }
+              }
+            }
+          },
           scales: {
-            x: { ticks: { color: '#64748b', font: { size: 10 } }, grid: { color: '#1e293b' } },
-            y: { ticks: { color: '#64748b', font: { size: 10 } }, grid: { color: '#1e293b' } }
+            x: { grid: { color: 'rgba(51, 65, 85, 0.4)' }, ticks: { color: '#94a3b8', font: { size: 10 } } },
+            y: { grid: { color: 'rgba(51, 65, 85, 0.4)' }, ticks: { color: '#94a3b8', font: { size: 10 } } }
           }
         }
       });
+    }
 
-      // Bar Chart
-      const barCtx = document.getElementById('incBarChart').getContext('2d');
-      if (incBarChartInstance) incBarChartInstance.destroy();
+    function renderDashboardTable() {
+      const tbody = document.getElementById('dashTableBody');
+      const searchQuery = document.getElementById('dashSearchInput').value.toLowerCase();
 
-      incBarChartInstance = new Chart(barCtx, {
-        type: 'bar',
-        data: {
-          labels: monthNames,
-          datasets: [{
-            label: `Pendapatan Joki ${targetYear}`,
-            data: currentYearData,
-            backgroundColor: '#3b82f6',
-            borderRadius: 6
-          }]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: { legend: { display: false } },
-          scales: {
-            x: { ticks: { color: '#64748b', font: { size: 10 } }, grid: { display: false } },
-            y: { ticks: { color: '#64748b', font: { size: 10 } }, grid: { color: '#1e293b' } }
-          }
-        }
+      let allTx = [];
+      Object.keys(dbMonthlyData).forEach(key => {
+        allTx = allTx.concat(dbMonthlyData[key] || []);
       });
+
+      const filtered = allTx.filter(tx => {
+        return tx.keterangan.toLowerCase().includes(searchQuery) || 
+               tx.tagNama.toLowerCase().includes(searchQuery) ||
+               tx.tanggal.includes(searchQuery);
+      });
+
+      if (filtered.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="4" class="p-6 text-center text-slate-500">Tidak ada data transaksi ditemukan.</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = filtered.slice(0, 50).map(tx => `
+        <tr class="hover:bg-slate-750 transition">
+          <td class="p-3 text-slate-400 whitespace-nowrap">${tx.tanggal}</td>
+          <td class="p-3 font-mono text-[11px] text-slate-300 max-w-xs break-words">${tx.keterangan}</td>
+          <td class="p-3 whitespace-nowrap">
+            <span class="bg-blue-500/10 text-blue-400 border border-blue-500/20 px-2 py-0.5 rounded text-[10px]">
+              ${tx.tagNama}
+            </span>
+          </td>
+          <td class="p-3 text-right font-semibold text-emerald-400 whitespace-nowrap">
+            +${formatCurrency(tx.amount, true)}
+          </td>
+        </tr>
+      `).join('');
     }
   </script>
 </body>
